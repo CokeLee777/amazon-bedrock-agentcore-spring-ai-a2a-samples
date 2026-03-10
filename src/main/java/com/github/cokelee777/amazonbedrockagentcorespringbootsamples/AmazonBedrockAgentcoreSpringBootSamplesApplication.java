@@ -6,8 +6,8 @@ import org.springframework.boot.autoconfigure.SpringBootApplication;
 @SpringBootApplication
 public class AmazonBedrockAgentcoreSpringBootSamplesApplication {
 
-    public static void main(String[] args) {
-        SpringApplication.run(AmazonBedrockAgentcoreSpringBootSamplesApplication.class, args);
-    }
+	public static void main(String[] args) {
+		SpringApplication.run(AmazonBedrockAgentcoreSpringBootSamplesApplication.class, args);
+	}
 
 }

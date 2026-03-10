@@ -1,0 +1,1 @@
+rootProject.name = "amazon-bedrock-agentcore-spring-boot-samples"
