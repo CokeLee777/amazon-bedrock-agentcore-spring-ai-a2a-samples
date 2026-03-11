@@ -93,12 +93,12 @@ public class A2aTransport {
 	 */
 	protected Optional<String> executeMessage(AgentCard card, Message message) throws Exception {
 		CompletableFuture<String> resultFuture = new CompletableFuture<>();
-		try (Client client = Client.builder(card)
+		Client client = Client.builder(card)
 			.withTransport(JSONRPCTransport.class, new JSONRPCTransportConfig())
 			.addConsumer((event, c) -> {
 				if (event instanceof TaskEvent taskEvent) {
 					Task task = taskEvent.getTask();
-					if (TaskState.TASK_STATE_FAILED.equals(task.status().state())) {
+					if (TaskState.FAILED.equals(task.getStatus().state())) {
 						resultFuture.complete(null);
 						return;
 					}
@@ -106,8 +106,12 @@ public class A2aTransport {
 				}
 			})
 			.streamingErrorHandler(resultFuture::completeExceptionally)
-			.build()) {
+			.build();
+		try {
 			client.sendMessage(message);
+		}
+		finally {
+			client.close();
 		}
 		return Optional.ofNullable(resultFuture.getNow(null));
 	}

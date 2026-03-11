@@ -1,13 +1,14 @@
 package io.github.cokelee777.agentcore.orchestrator;
 
 import io.a2a.server.agentexecution.RequestContext;
-import io.a2a.server.tasks.AgentEmitter;
+import io.a2a.server.events.EventQueue;
+import io.a2a.server.tasks.TaskUpdater;
 import io.a2a.spec.Message;
 import io.a2a.spec.TextPart;
 import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.mock.web.MockHttpServletRequest;
@@ -18,7 +19,9 @@ import java.util.List;
 
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.argThat;
+import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -35,10 +38,18 @@ class OrchestratorAgentExecutorTest {
 	private RequestContext requestContext;
 
 	@Mock
-	private AgentEmitter emitter;
+	private EventQueue eventQueue;
 
-	@InjectMocks
+	@Mock
+	private TaskUpdater mockUpdater;
+
 	private OrchestratorAgentExecutor executor;
+
+	@BeforeEach
+	void setUp() {
+		executor = spy(new OrchestratorAgentExecutor(chatOrchestrator));
+		doReturn(mockUpdater).when(executor).createTaskUpdater(any(), any());
+	}
 
 	@AfterEach
 	void tearDown() {
@@ -46,11 +57,7 @@ class OrchestratorAgentExecutorTest {
 	}
 
 	private Message buildMessage(String text) {
-		return Message.builder()
-			.messageId("m1")
-			.role(Message.Role.ROLE_USER)
-			.parts(List.of(new TextPart(text)))
-			.build();
+		return new Message.Builder().messageId("m1").role(Message.Role.USER).parts(List.of(new TextPart(text))).build();
 	}
 
 	@Test
@@ -62,7 +69,7 @@ class OrchestratorAgentExecutorTest {
 		when(requestContext.getMessage()).thenReturn(buildMessage("텍스트"));
 		when(chatOrchestrator.handle(any(ChatRequest.class))).thenReturn(new ChatResponse("응답"));
 
-		executor.execute(requestContext, emitter);
+		executor.execute(requestContext, eventQueue);
 
 		verify(chatOrchestrator)
 			.handle(argThat(r -> "텍스트".equals(r.userMessage()) && "session-abc".equals(r.sessionId())));
@@ -77,7 +84,7 @@ class OrchestratorAgentExecutorTest {
 		when(requestContext.getMessage()).thenReturn(buildMessage("텍스트"));
 		when(chatOrchestrator.handle(any(ChatRequest.class))).thenReturn(new ChatResponse("응답"));
 
-		executor.execute(requestContext, emitter);
+		executor.execute(requestContext, eventQueue);
 
 		verify(chatOrchestrator).handle(any(ChatRequest.class));
 	}
@@ -88,7 +95,7 @@ class OrchestratorAgentExecutorTest {
 		when(requestContext.getMessage()).thenReturn(buildMessage("텍스트"));
 		when(chatOrchestrator.handle(any(ChatRequest.class))).thenReturn(new ChatResponse("응답"));
 
-		executor.execute(requestContext, emitter);
+		executor.execute(requestContext, eventQueue);
 
 		verify(chatOrchestrator).handle(any(ChatRequest.class));
 	}
@@ -100,12 +107,12 @@ class OrchestratorAgentExecutorTest {
 		when(requestContext.getMessage()).thenReturn(buildMessage("텍스트"));
 		when(chatOrchestrator.handle(any(ChatRequest.class))).thenReturn(new ChatResponse("응답"));
 
-		executor.execute(requestContext, emitter);
+		executor.execute(requestContext, eventQueue);
 
-		verify(emitter).startWork();
-		verify(emitter).addArtifact(any());
-		verify(emitter).complete();
-		verify(emitter, never()).fail();
+		verify(mockUpdater).startWork();
+		verify(mockUpdater).addArtifact(any());
+		verify(mockUpdater).complete();
+		verify(mockUpdater, never()).fail();
 	}
 
 	@Test
@@ -116,18 +123,18 @@ class OrchestratorAgentExecutorTest {
 		when(requestContext.getMessage()).thenReturn(buildMessage("텍스트"));
 		when(chatOrchestrator.handle(any(ChatRequest.class))).thenThrow(new RuntimeException("LLM error"));
 
-		executor.execute(requestContext, emitter);
+		executor.execute(requestContext, eventQueue);
 
-		verify(emitter).startWork();
-		verify(emitter).fail();
-		verify(emitter, never()).complete();
+		verify(mockUpdater).startWork();
+		verify(mockUpdater).fail();
+		verify(mockUpdater, never()).complete();
 	}
 
 	@Test
 	void cancel_callsEmitterCancel() throws Exception {
-		executor.cancel(requestContext, emitter);
+		executor.cancel(requestContext, eventQueue);
 
-		verify(emitter).cancel();
+		verify(mockUpdater).cancel();
 	}
 
 }

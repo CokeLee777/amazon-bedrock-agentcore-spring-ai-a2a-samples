@@ -7,7 +7,7 @@ plugins {
 
 val springAiVersion by extra("1.1.2")
 val awsSdkVersion by extra("2.42.9")
-val a2aVersion by extra("1.0.0.Alpha3")
+val a2aVersion by extra("0.3.2.Final")
 val gsonVersion by extra("2.13.2")
 
 subprojects {

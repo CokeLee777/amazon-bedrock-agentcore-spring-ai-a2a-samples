@@ -2,8 +2,9 @@ package io.github.cokelee777.agentcore.orchestrator;
 
 import io.a2a.server.agentexecution.AgentExecutor;
 import io.a2a.server.agentexecution.RequestContext;
-import io.a2a.server.tasks.AgentEmitter;
-import io.a2a.spec.A2AError;
+import io.a2a.server.events.EventQueue;
+import io.a2a.server.tasks.TaskUpdater;
+import io.a2a.spec.JSONRPCError;
 import io.a2a.spec.Message;
 import io.a2a.spec.TextPart;
 import io.github.cokelee777.agentcore.common.util.TextExtractor;
@@ -44,8 +45,9 @@ public class OrchestratorAgentExecutor implements AgentExecutor {
 	}
 
 	@Override
-	public void execute(RequestContext context, AgentEmitter emitter) throws A2AError {
-		emitter.startWork();
+	public void execute(RequestContext context, EventQueue eventQueue) throws JSONRPCError {
+		TaskUpdater updater = createTaskUpdater(context, eventQueue);
+		updater.startWork();
 
 		Message message = Objects.requireNonNull(context.getMessage(), "message must not be null");
 		String text = TextExtractor.extractFromMessage(message);
@@ -54,18 +56,32 @@ public class OrchestratorAgentExecutor implements AgentExecutor {
 
 		try {
 			ChatResponse response = chatOrchestrator.handle(new ChatRequest(text, sessionId));
-			emitter.addArtifact(List.of(new TextPart(response.content())));
-			emitter.complete();
+			updater.addArtifact(List.of(new TextPart(response.content())));
+			updater.complete();
 		}
 		catch (Exception e) {
 			log.error("Orchestrator execution error: {}", e.getMessage(), e);
-			emitter.fail();
+			updater.fail();
 		}
 	}
 
 	@Override
-	public void cancel(RequestContext context, AgentEmitter emitter) throws A2AError {
-		emitter.cancel();
+	public void cancel(RequestContext context, EventQueue eventQueue) throws JSONRPCError {
+		createTaskUpdater(context, eventQueue).cancel();
+	}
+
+	/**
+	 * Creates a {@link TaskUpdater} for the given context and event queue.
+	 *
+	 * <p>
+	 * Protected to allow spy-based overriding in unit tests.
+	 * </p>
+	 * @param context the request context
+	 * @param eventQueue the event queue for this task
+	 * @return a new {@link TaskUpdater}
+	 */
+	protected TaskUpdater createTaskUpdater(RequestContext context, EventQueue eventQueue) {
+		return new TaskUpdater(context, eventQueue);
 	}
 
 	/**

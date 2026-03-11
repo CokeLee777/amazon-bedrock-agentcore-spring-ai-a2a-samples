@@ -47,8 +47,7 @@ public abstract class A2aTool {
 	 * @return the agent's response text, or a Korean error message if the call fails
 	 */
 	protected String sendRequest(String skillId, String text) {
-		Message message = Message.builder()
-			.role(Message.Role.ROLE_USER)
+		Message message = new Message.Builder().role(Message.Role.USER)
 			.parts(List.of(new TextPart(text)))
 			.metadata(Map.of(A2aMetadataKeys.SKILL_ID, skillId))
 			.build();

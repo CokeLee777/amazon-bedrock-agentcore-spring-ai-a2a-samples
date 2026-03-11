@@ -38,12 +38,13 @@ class A2AJsonRpcControllerTest {
 			{
 			  "jsonrpc": "2.0",
 			  "id": "1",
-			  "method": "SendMessage",
+			  "method": "message/send",
 			  "params": {
 			    "message": {
+			      "kind": "message",
 			      "messageId": "msg-1",
-			      "role": "ROLE_USER",
-			      "parts": [{"text": "hello"}]
+			      "role": "user",
+			      "parts": [{"kind": "text", "text": "hello"}]
 			    }
 			  }
 			}
@@ -65,14 +66,14 @@ class A2AJsonRpcControllerTest {
 	 */
 	@Test
 	void validMessageSendReturns200() throws Exception {
-		Task task = Task.builder()
-			.id("task-1")
+		Task task = new Task.Builder().id("task-1")
 			.contextId("ctx-1")
-			.status(new TaskStatus(TaskState.TASK_STATE_COMPLETED))
+			.status(new TaskStatus(TaskState.COMPLETED))
 			.build();
 		when(requestHandler.onMessageSend(any(), any())).thenReturn(task);
 
 		mockMvc.perform(post("/").contentType(MediaType.APPLICATION_JSON).content(VALID_MESSAGE_SEND_BODY))
+			.andDo(org.springframework.test.web.servlet.result.MockMvcResultHandlers.print())
 			.andExpect(status().isOk());
 	}
 

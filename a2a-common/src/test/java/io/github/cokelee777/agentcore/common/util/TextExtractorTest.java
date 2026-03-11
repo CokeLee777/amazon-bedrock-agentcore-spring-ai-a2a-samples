@@ -28,15 +28,14 @@ class TextExtractorTest {
 
 	@Test
 	void extractFromMessage_singleTextPart_returnsText() {
-		Message message = Message.builder().role(Message.Role.ROLE_USER).parts(new TextPart("hello")).build();
+		Message message = new Message.Builder().role(Message.Role.USER).parts(new TextPart("hello")).build();
 
 		assertThat(TextExtractor.extractFromMessage(message)).isEqualTo("hello");
 	}
 
 	@Test
 	void extractFromMessage_multipleTextParts_concatenatesAll() {
-		Message message = Message.builder()
-			.role(Message.Role.ROLE_USER)
+		Message message = new Message.Builder().role(Message.Role.USER)
 			.parts(new TextPart("hello"), new TextPart(" world"))
 			.build();
 
@@ -46,17 +45,16 @@ class TextExtractorTest {
 	@Test
 	@SuppressWarnings("unchecked")
 	void extractFromMessage_noTextParts_returnsEmptyString() {
-		when(mockMessage.parts()).thenReturn(List.of());
+		when(mockMessage.getParts()).thenReturn(List.of());
 
 		assertThat(TextExtractor.extractFromMessage(mockMessage)).isEmpty();
 	}
 
 	@Test
 	void extractFromTask_nullArtifacts_returnsEmptyString() {
-		Task task = Task.builder()
-			.id("task-1")
+		Task task = new Task.Builder().id("task-1")
 			.contextId("ctx-1")
-			.status(new TaskStatus(TaskState.TASK_STATE_COMPLETED))
+			.status(new TaskStatus(TaskState.COMPLETED))
 			.build();
 
 		assertThat(TextExtractor.extractFromTask(task)).isEmpty();
@@ -64,10 +62,9 @@ class TextExtractorTest {
 
 	@Test
 	void extractFromTask_emptyArtifactsList_returnsEmptyString() {
-		Task task = Task.builder()
-			.id("task-1")
+		Task task = new Task.Builder().id("task-1")
 			.contextId("ctx-1")
-			.status(new TaskStatus(TaskState.TASK_STATE_COMPLETED))
+			.status(new TaskStatus(TaskState.COMPLETED))
 			.artifacts(List.of())
 			.build();
 
@@ -76,15 +73,13 @@ class TextExtractorTest {
 
 	@Test
 	void extractFromTask_artifactsWithTextParts_concatenatesAllText() {
-		Artifact artifact1 = Artifact.builder()
-			.artifactId("art-1")
+		Artifact artifact1 = new Artifact.Builder().artifactId("art-1")
 			.parts(new TextPart("order"), new TextPart(" info"))
 			.build();
-		Artifact artifact2 = Artifact.builder().artifactId("art-2").parts(new TextPart(" delivered")).build();
-		Task task = Task.builder()
-			.id("task-1")
+		Artifact artifact2 = new Artifact.Builder().artifactId("art-2").parts(new TextPart(" delivered")).build();
+		Task task = new Task.Builder().id("task-1")
 			.contextId("ctx-1")
-			.status(new TaskStatus(TaskState.TASK_STATE_COMPLETED))
+			.status(new TaskStatus(TaskState.COMPLETED))
 			.artifacts(List.of(artifact1, artifact2))
 			.build();
 

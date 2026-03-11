@@ -40,8 +40,7 @@ class A2aTransportTest {
 	@Mock
 	private AgentCard mockAgentCard;
 
-	private final Message testMessage = Message.builder()
-		.role(Message.Role.ROLE_USER)
+	private final Message testMessage = new Message.Builder().role(Message.Role.USER)
 		.parts(new io.a2a.spec.TextPart("hello"))
 		.build();
 

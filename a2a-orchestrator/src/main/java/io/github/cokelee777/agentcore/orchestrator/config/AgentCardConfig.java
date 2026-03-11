@@ -33,29 +33,26 @@ public class AgentCardConfig {
 	@Bean
 	public AgentCard agentCard(@Value("${server.port}") int serverPort) {
 		String agentUrl = String.format("http://localhost:%s/", serverPort);
-		return AgentCard.builder()
-			.name("A2A Orchestrator")
+		return new AgentCard.Builder().name("A2A Orchestrator")
 			.description("주문/배송 관련 다중 에이전트를 조율하는 오케스트레이터")
-			.supportedInterfaces(List.of(new AgentInterface(TransportProtocol.JSONRPC.asString(), agentUrl)))
+			.url(agentUrl)
+			.additionalInterfaces(List.of(new AgentInterface(TransportProtocol.JSONRPC.asString(), agentUrl)))
 			.version("1.0.0")
-			.capabilities(AgentCapabilities.builder().streaming(false).pushNotifications(false).build())
+			.capabilities(new AgentCapabilities.Builder().streaming(false).pushNotifications(false).build())
 			.defaultInputModes(List.of("text"))
 			.defaultOutputModes(List.of("text"))
 			.skills(List.of(
-					AgentSkill.builder()
-						.id("order_query")
+					new AgentSkill.Builder().id("order_query")
 						.name("주문 조회")
 						.description("회원의 주문 목록을 조회합니다")
 						.tags(List.of("order", "list"))
 						.build(),
-					AgentSkill.builder()
-						.id("order_cancellability")
+					new AgentSkill.Builder().id("order_cancellability")
 						.name("주문 취소 가능 여부 확인")
 						.description("배송/결제 상태를 병렬 확인하여 취소 가능 여부를 판단합니다")
 						.tags(List.of("order", "cancellability"))
 						.build(),
-					AgentSkill.builder()
-						.id("delivery_tracking")
+					new AgentSkill.Builder().id("delivery_tracking")
 						.name("배송 조회")
 						.description("운송장번호로 배송 상태를 추적합니다")
 						.tags(List.of("delivery", "tracking"))

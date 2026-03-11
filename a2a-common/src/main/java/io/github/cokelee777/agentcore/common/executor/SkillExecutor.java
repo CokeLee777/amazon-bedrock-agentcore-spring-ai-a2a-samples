@@ -1,4 +1,4 @@
-package io.github.cokelee777.agentcore.autoconfigure.executor;
+package io.github.cokelee777.agentcore.common.executor;
 
 import io.a2a.spec.Message;
 
@@ -25,8 +25,8 @@ public interface SkillExecutor {
 
 	/**
 	 * Returns the A2A caller role required to invoke this skill.
-	 * @return {@link Message.Role#ROLE_AGENT} for internal skills,
-	 * {@link Message.Role#ROLE_USER} for external skills
+	 * @return {@link Message.Role#AGENT} for internal skills, {@link Message.Role#USER}
+	 * for external skills
 	 */
 	Message.Role requiredRole();
 

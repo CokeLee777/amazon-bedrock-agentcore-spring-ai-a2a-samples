@@ -24,9 +24,9 @@ public final class TextExtractor {
 	 */
 	public static String extractFromMessage(Message message) {
 		StringBuilder textBuilder = new StringBuilder();
-		for (Part<?> part : message.parts()) {
+		for (Part<?> part : message.getParts()) {
 			if (part instanceof TextPart textPart) {
-				textBuilder.append(textPart.text());
+				textBuilder.append(textPart.getText());
 			}
 		}
 		return textBuilder.toString();
@@ -40,13 +40,13 @@ public final class TextExtractor {
 	 * text parts
 	 */
 	public static String extractFromTask(Task task) {
-		if (task.artifacts() == null) {
+		if (task.getArtifacts() == null) {
 			return "";
 		}
 		StringBuilder textBuilder = new StringBuilder();
-		task.artifacts().forEach(artifact -> artifact.parts().forEach(part -> {
+		task.getArtifacts().forEach(artifact -> artifact.parts().forEach(part -> {
 			if (part instanceof TextPart textPart) {
-				textBuilder.append(textPart.text());
+				textBuilder.append(textPart.getText());
 			}
 		}));
 		return textBuilder.toString();
