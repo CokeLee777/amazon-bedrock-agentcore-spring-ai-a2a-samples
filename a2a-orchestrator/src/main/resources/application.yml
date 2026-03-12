@@ -12,6 +12,9 @@ spring:
             model: ${BEDROCK_MODEL_ID:amazon.nova-pro-v1:0}
 
 a2a:
+  # This orchestrator's public base URL (AgentCard.url / JSON-RPC interface).
+  # Use a Runtime-reachable URL in production; localhost is for local bootRun only.
+  orchestrator-url: ${ORCHESTRATOR_URL:http://localhost:9000}
   order-agent-url: ${ORDER_AGENT_URL:http://localhost:8081}
   delivery-agent-url: ${DELIVERY_AGENT_URL:http://localhost:8082}
   payment-agent-url: ${PAYMENT_AGENT_URL:http://localhost:8083}

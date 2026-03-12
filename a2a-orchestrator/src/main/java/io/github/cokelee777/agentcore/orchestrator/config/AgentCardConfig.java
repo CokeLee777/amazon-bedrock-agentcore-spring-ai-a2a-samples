@@ -14,19 +14,25 @@ import java.util.List;
 /**
  * Provides the {@link AgentCard} bean that describes this orchestrator to other A2A
  * agents and to the AgentCore Runtime discovery endpoint.
+ *
+ * <p>
+ * The card's {@code url} and JSON-RPC interface URL are taken verbatim from
+ * {@code a2a.orchestrator-url} with no normalization—configure the exact base URL
+ * callers must use (including path or trailing slash if your deployment requires it).
+ * </p>
  */
 @Configuration
 public class AgentCardConfig {
 
 	/**
 	 * Builds the agent card advertising the orchestrator's skills.
-	 * @param serverPort the HTTP port read from {@code server.port}; used to construct
-	 * the agent's self-referencing URL
+	 * @param agentUrl base URL of this orchestrator as seen by AgentCore Runtime and
+	 * other A2A callers; injected from {@code a2a.orchestrator-url} and passed through
+	 * unchanged into {@link AgentCard.Builder#url} and {@code additionalInterfaces}
 	 * @return the fully constructed {@link AgentCard}
 	 */
 	@Bean
-	public AgentCard agentCard(@Value("${server.port}") int serverPort) {
-		String agentUrl = String.format("http://localhost:%s/", serverPort);
+	public AgentCard agentCard(@Value("${a2a.orchestrator-url}") String agentUrl) {
 		return new AgentCard.Builder().name("A2A Orchestrator")
 			.description("주문/배송 관련 다중 에이전트를 조율하는 오케스트레이터")
 			.url(agentUrl)

@@ -18,25 +18,31 @@ AgentCore Runtime이 세션을 관리하며, 오케스트레이터가 Spring AI 
 ./gradlew :a2a-common:compileJava
 ```
 
+Gradle Kotlin DSL 사용: 루트 `build.gradle.kts`, `settings.gradle.kts`, 서브프로젝트 `build.gradle.kts`.
+
 ## 모듈 구조
 
 ```
 amazon-bedrock-agentcore-spring-boot-samples/
-├── a2a-common/                          # 공유 유틸리티
-│   ├── A2aTransport                     # A2A 클라이언트 (AgentCard 캐싱, TaskEvent, timeout)
-│   └── TextExtractor                    # Task/Message에서 텍스트 추출
-├── a2a-spring-boot-autoconfigure/       # A2A 서버 자동 구성
-│   ├── A2AServerAutoConfiguration       # AgentExecutor 빈 있을 때만 활성화
-│   ├── A2AJsonRpcController             # POST / 엔드포인트 (JSON-RPC)
-│   └── SkillExecutor                    # 스킬 라우팅 인터페이스
-└── a2a-orchestrator/                    # 오케스트레이터 에이전트 (port: 9000)
-    ├── OrchestratorAgentExecutor        # AgentCore Runtime 진입점
-    ├── ChatOrchestrator                 # Spring AI ChatClient 래퍼
+├── a2a-common/                              # 공유 유틸리티
+│   ├── transport/A2aTransport               # A2A 클라이언트 (AgentCard 캐싱, TaskEvent, timeout)
+│   ├── util/TextExtractor                   # Task/Message에서 텍스트 추출
+│   └── executor/SkillExecutor               # 스킬 라우팅 인터페이스 (skillId, requiredRole, execute)
+├── a2a-spring-boot-autoconfigure/           # A2A 서버·공통 자동 구성
+│   ├── A2AServerAutoConfiguration           # AgentExecutor 빈 있을 때만 활성화 (TaskStore, JSON-RPC 등)
+│   ├── A2ACommonAutoConfiguration           # AgentCard 빈 있을 때만 활성화 (Ping, AgentCard 컨트롤러)
+│   ├── controller/A2AJsonRpcController      # POST / JSON-RPC
+│   ├── controller/A2AAgentCardController    # AgentCard 노출
+│   └── controller/PingController            # 헬스 체크
+└── a2a-orchestrator/                        # 오케스트레이터 에이전트 (port: 9000)
+    ├── config/AgentCardConfig               # AgentCard 빈 (orchestrator-url 그대로 url에 반영)
+    ├── OrchestratorAgentExecutor            # AgentCore Runtime 진입점
+    ├── ChatOrchestrator                     # Spring AI ChatClient 래퍼
     └── tools/
-        ├── A2aTool                      # 다운스트림 에이전트 호출 추상 베이스
-        ├── OrderAgentTool               # 주문 조회 / 취소 가능 여부 확인
-        ├── DeliveryAgentTool            # 배송 추적
-        └── PaymentAgentTool             # 결제/환불 상태 확인
+        ├── A2aTool                          # 다운스트림 에이전트 호출 추상 베이스
+        ├── OrderAgentTool                   # 주문 조회 / 취소 가능 여부 확인
+        ├── DeliveryAgentTool                # 배송 추적
+        └── PaymentAgentTool                 # 결제/환불 상태 확인
 ```
 
 ## 핵심 설계 결정 사항
@@ -60,10 +66,24 @@ amazon-bedrock-agentcore-spring-boot-samples/
 - 툴 실행은 기본적으로 **순차 실행**이다. LLM이 한 번의 응답에 여러 툴을 요청해도 Java 측에서 순차 처리한다.
 - `MessageChatMemoryAdvisor` 가 세션 ID 단위로 대화 기억을 관리한다 (`ChatMemory.CONVERSATION_ID`).
 
+### AgentCard (orchestrator)
+
+- 오케스트레이터 자신의 AgentCard URL은 `a2a.orchestrator-url`에서 **그대로** 받는다 (정규화 없음).
+  로컬 기본값은 `http://localhost:9000`이며, AgentCore Runtime 배포 시에는 런타임/게이트웨이에서
+  도달 가능한 URL로 `ORCHESTRATOR_URL` 등으로 덮어쓴다.
+- `AgentCardConfig` 에서 스킬 `order_query`, `order_cancellability`, `delivery_tracking` 을 등록한다.
+
 ### auto-configure 활성화 조건
 
-- `A2AServerAutoConfiguration` — `AgentExecutor` 빈이 컨텍스트에 있을 때만 활성화
-- `A2ACommonAutoConfiguration` — `AgentCard` 빈이 컨텍스트에 있을 때만 활성화
+- `A2AServerAutoConfiguration` — `AgentExecutor` 빈이 컨텍스트에 있을 때만 활성화 (다운스트림 에이전트 서버용).
+- `A2ACommonAutoConfiguration` — `AgentCard` 빈이 컨텍스트에 있을 때만 활성화 (Ping + AgentCard 컨트롤러).
+
+## 의존성 버전 (루트 build.gradle.kts extra)
+
+- `springAiVersion` — 1.1.2  
+- `awsSdkVersion` — 2.42.9  
+- `a2aVersion` — 0.3.2.Final  
+- `gsonVersion` — 2.13.2  
 
 ## 코드 컨벤션
 
