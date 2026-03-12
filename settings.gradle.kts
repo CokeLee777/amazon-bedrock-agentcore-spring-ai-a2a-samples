@@ -1,7 +1,9 @@
 rootProject.name = "amazon-bedrock-agentcore-spring-boot-samples"
 
 include("a2a-common")
-include("a2a-spring-boot-autoconfigure")
-include("spring-ai-a2a-server-autoconfigure")
 include("spring-ai-a2a-server")
-include("a2a-orchestrator")
+include("spring-ai-a2a-server-autoconfigure")
+include("agents:host-agent")
+include("agents:order-agent")
+include("agents:delivery-agent")
+include("agents:payment-agent")
