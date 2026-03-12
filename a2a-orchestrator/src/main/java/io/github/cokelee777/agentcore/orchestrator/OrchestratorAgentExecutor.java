@@ -85,6 +85,7 @@ public class OrchestratorAgentExecutor implements AgentExecutor {
 	 * Falls back to a random UUID when no servlet request is bound to the current thread
 	 * (e.g. local testing without AgentCore Runtime).
 	 * </p>
+	 * @return session ID from the header when present and non-blank; otherwise a new UUID
 	 */
 	private String resolveSessionId() {
 		try {

@@ -79,9 +79,16 @@ public class A2AJsonRpcController {
 
 	/**
 	 * Handles a synchronous A2A JSON-RPC request and returns the serialized response.
+	 *
+	 * <p>
+	 * On success, returns {@code 200 OK} with a JSON-RPC result body. On failure (parse,
+	 * dispatch, or handler error), returns {@code 500} with a JSON-RPC error response
+	 * body in most cases. If serializing that error response fails, the response body may
+	 * be a plain text message instead of JSON-RPC.
+	 * </p>
 	 * @param body the raw JSON-RPC request body
-	 * @return {@code 200 OK} with the serialized JSON-RPC result, or {@code 500} with a
-	 * JSON-RPC error response if parsing or dispatch fails
+	 * @return {@code 200} with result JSON, or {@code 500} with error JSON (or plain text
+	 * on serialization failure)
 	 */
 	@PostMapping(value = "/", consumes = MediaType.APPLICATION_JSON_VALUE, produces = MediaType.APPLICATION_JSON_VALUE)
 	public ResponseEntity<String> handle(@RequestBody String body) {

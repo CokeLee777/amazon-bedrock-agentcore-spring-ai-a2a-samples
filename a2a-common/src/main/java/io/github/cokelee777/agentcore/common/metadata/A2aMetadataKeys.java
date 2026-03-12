@@ -10,7 +10,13 @@ package io.github.cokelee777.agentcore.common.metadata;
  */
 public final class A2aMetadataKeys {
 
-	/** Metadata key carrying the skill ID that the caller wants to invoke. */
+	/**
+	 * Metadata key carrying the skill ID that the caller wants to invoke.
+	 *
+	 * <p>
+	 * Value must match a skill {@code id} from the target agent's {@code AgentCard}.
+	 * </p>
+	 */
 	public static final String SKILL_ID = "skillId";
 
 	private A2aMetadataKeys() {

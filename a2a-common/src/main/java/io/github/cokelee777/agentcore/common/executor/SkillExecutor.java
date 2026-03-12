@@ -25,8 +25,8 @@ public interface SkillExecutor {
 
 	/**
 	 * Returns the A2A caller role required to invoke this skill.
-	 * @return {@link Message.Role#AGENT} for internal skills, {@link Message.Role#USER}
-	 * for external skills
+	 * @return {@link Message.Role#AGENT} for internal skills, or
+	 * {@link Message.Role#USER} for external skills
 	 */
 	Message.Role requiredRole();
 
