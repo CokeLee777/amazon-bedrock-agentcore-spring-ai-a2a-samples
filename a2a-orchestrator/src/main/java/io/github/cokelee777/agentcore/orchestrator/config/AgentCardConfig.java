@@ -28,7 +28,7 @@ public class AgentCardConfig {
 	 * Builds the agent card advertising the orchestrator's skills.
 	 * @param agentUrl base URL of this orchestrator as seen by AgentCore Runtime and
 	 * other A2A callers; injected from {@code a2a.orchestrator-url} and passed through
-	 * unchanged into {@link AgentCard.Builder#url} and {@code additionalInterfaces}
+	 * unchanged into {@link AgentCard.Builder#url()} and {@code additionalInterfaces}
 	 * @return the fully constructed {@link AgentCard}
 	 */
 	@Bean
