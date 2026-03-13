@@ -20,7 +20,7 @@ AgentCore Runtime
    ▼          ▼      ▼
 Order       Delivery  Payment
 Agent       Agent     Agent
-(9001)      (9002)    (9003)
+(9000)      (9000)    (9000)
 ```
 
 오케스트레이터의 AgentCard에는 다음 스킬이 등록되어 있습니다.
@@ -33,15 +33,15 @@ Agent       Agent     Agent
 
 ## 모듈 구조
 
-| 모듈 | 포트   | 설명 |
-|------|------|------|
+| 모듈 | 포트   | 설명                                                  |
+|------|------|-----------------------------------------------------|
 | `a2a-common` | —    | A2A 클라이언트 `A2aTransport`, `TextExtractor` 등 공유 유틸리티 |
-| `spring-ai-a2a-server` | —    | A2A 서버 구현체 (JSON-RPC, AgentCard, Ping 컨트롤러) |
-| `spring-ai-a2a-server-autoconfigure` | —    | A2A 서버/공통 인프라 자동 구성 |
-| `agents:host-agent` | 8080 | AgentCore Runtime 진입점 · 오케스트레이터 |
-| `agents:order-agent` | 9001 | 주문 조회 · 취소 가능 여부 확인 A2A 에이전트 |
-| `agents:delivery-agent` | 9002 | 배송 추적 A2A 에이전트 |
-| `agents:payment-agent` | 9003 | 결제/환불 상태 확인 A2A 에이전트 |
+| `spring-ai-a2a-server` | —    | A2A 서버 구현체 (AgentCard, Message 컨트롤러, Task 컨트롤러)     |
+| `spring-ai-a2a-server-autoconfigure` | —    | A2A 서버/공통 인프라 자동 구성                                 |
+| `agents:host-agent` | 8080 | AgentCore Runtime 진입점 · 오케스트레이터                     |
+| `agents:order-agent` | 9000 | 주문 조회 · 취소 가능 여부 확인 A2A 에이전트                        |
+| `agents:delivery-agent` | 9000 | 배송 추적 A2A 에이전트                                      |
+| `agents:payment-agent` | 9000 | 결제/환불 상태 확인 A2A 에이전트                                |
 
 ## 전제 조건
 
@@ -55,9 +55,9 @@ Agent       Agent     Agent
 |------|-------------------------|------|
 | `BEDROCK_REGION` | `ap-northeast-2`        | AWS 리전 |
 | `BEDROCK_MODEL_ID` | `amazon.nova-pro-v1:0`  | Bedrock Converse 모델 ID |
-| `ORDER_AGENT_URL` | `http://localhost:9001` | 주문 에이전트 URL |
-| `DELIVERY_AGENT_URL` | `http://localhost:9002` | 배송 에이전트 URL |
-| `PAYMENT_AGENT_URL` | `http://localhost:9003` | 결제 에이전트 URL |
+| `ORDER_AGENT_URL` | agent별 기본값 | 주문 에이전트 URL |
+| `DELIVERY_AGENT_URL` | agent별 기본값 | 배송 에이전트 URL |
+| `PAYMENT_AGENT_URL` | agent별 기본값 | 결제 에이전트 URL |
 | `A2A_CLIENT_TIMEOUT_SECONDS` | `15`                    | 다운스트림 에이전트 호출 타임아웃(초) |
 | `AGENT_URL` | agent별 기본값              | 각 에이전트의 공개 베이스 URL (AgentCard.url) |
 | `AGENT_PORT` | agent별 기본값              | 각 에이전트 리슨 포트 |
@@ -84,15 +84,15 @@ Agent       Agent     Agent
 ```bash
 # 다운스트림 에이전트
 docker buildx build --platform linux/amd64 \
-  -f agents/order-agent/Dockerfile -t order-agent:latest --load .
+  -f agents/order-agent/Dockerfile -t order-agent:latest .
 docker buildx build --platform linux/amd64 \
-  -f agents/delivery-agent/Dockerfile -t delivery-agent:latest --load .
+  -f agents/delivery-agent/Dockerfile -t delivery-agent:latest .
 docker buildx build --platform linux/amd64 \
-  -f agents/payment-agent/Dockerfile -t payment-agent:latest --load .
+  -f agents/payment-agent/Dockerfile -t payment-agent:latest .
 
 # host-agent (AgentCore 배포 → ARM64 필수)
 docker buildx build --platform linux/arm64 \
-  -f agents/host-agent/Dockerfile -t host-agent:arm64 --load .
+  -f agents/host-agent/Dockerfile -t host-agent:latest .
 ```
 
 ## 주요 기술 스택
@@ -101,5 +101,5 @@ docker buildx build --platform linux/arm64 \
 - **Spring AI 1.1.2** — ChatClient, Tool Calling (`@Tool` / `@ToolParam`), Bedrock Converse
 - **Amazon Bedrock** (Amazon Nova Pro) — LLM 추론
 - **A2A Java SDK 0.3.3.Final** (`io.github.a2asdk`) — Agent-to-Agent 프로토콜
-- **AWS SDK 2.42.x** — Bedrock AgentCore 등
+- **AWS SDK 2.42.x** — **Bedrock** AgentCore 등
 - **Amazon Bedrock AgentCore Runtime** — 세션 관리, 에이전트 엔트리포인트
