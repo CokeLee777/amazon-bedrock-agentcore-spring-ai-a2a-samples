@@ -9,7 +9,7 @@ spring:
       converse:
         chat:
           options:
-            model: ${BEDROCK_MODEL_ID:amazon.nova-pro-v1:0}
+            model: ${BEDROCK_MODEL_ID:arn:aws:bedrock:ap-northeast-2:<ID>:inference-profile/apac.amazon.nova-lite-v1:0}
 
 a2a:
   agent-url: ${AGENT_URL:http://localhost:9000}
