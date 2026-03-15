@@ -13,7 +13,7 @@ AgentCore Runtime
       │
       ▼ (POST /invocations)
 ┌─────────────────────────┐
-│       host-agent        │  ← Spring AI ChatClient (Bedrock Converse / Nova Pro)
+│       host-agent        │  ← Spring AI ChatClient (Bedrock Converse / Nova Lite)
 │       (port: 8080)      │     RemoteAgentConnections (@Tool)
 └──┬──────────┬──────┬────┘
    │          │      │  (A2A JSON-RPC)
@@ -51,16 +51,16 @@ Agent       Agent     Agent
 
 ## 환경변수
 
-| 변수 | 기본값                     | 설명 |
-|------|-------------------------|------|
-| `BEDROCK_REGION` | `ap-northeast-2`        | AWS 리전 |
-| `BEDROCK_MODEL_ID` | `amazon.nova-pro-v1:0`  | Bedrock Converse 모델 ID |
-| `ORDER_AGENT_URL` | agent별 기본값 | 주문 에이전트 URL |
-| `DELIVERY_AGENT_URL` | agent별 기본값 | 배송 에이전트 URL |
-| `PAYMENT_AGENT_URL` | agent별 기본값 | 결제 에이전트 URL |
-| `A2A_CLIENT_TIMEOUT_SECONDS` | `15`                    | 다운스트림 에이전트 호출 타임아웃(초) |
-| `AGENT_URL` | agent별 기본값              | 각 에이전트의 공개 베이스 URL (AgentCard.url) |
-| `AGENT_PORT` | agent별 기본값              | 각 에이전트 리슨 포트 |
+| 변수 | 기본값                    | 설명 |
+|------|------------------------|------|
+| `BEDROCK_REGION` | `ap-northeast-2`       | AWS 리전 |
+| `BEDROCK_MODEL_ID` | `amazon.nova-lite-v1:0` | Bedrock Converse 모델 ID |
+| `ORDER_AGENT_URL` | agent별 기본값             | 주문 에이전트 URL |
+| `DELIVERY_AGENT_URL` | agent별 기본값             | 배송 에이전트 URL |
+| `PAYMENT_AGENT_URL` | agent별 기본값             | 결제 에이전트 URL |
+| `A2A_CLIENT_TIMEOUT_SECONDS` | `15`                   | 다운스트림 에이전트 호출 타임아웃(초) |
+| `AGENT_URL` | agent별 기본값             | 각 에이전트의 공개 베이스 URL (AgentCard.url) |
+| `AGENT_PORT` | agent별 기본값             | 각 에이전트 리슨 포트 |
 
 ## 실행 방법
 
