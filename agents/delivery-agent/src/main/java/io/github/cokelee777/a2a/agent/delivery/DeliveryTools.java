@@ -22,16 +22,12 @@ public class DeliveryTools {
 	 */
 	@Tool(description = "운송장번호로 배송 상태 조회")
 	public String trackDelivery(@ToolParam(description = "조회할 운송장번호 (예: TRACK-1001)") String trackingNumber) {
-		if (trackingNumber.contains("TRACK-1001")) {
-			return "TRACK-1001 배송 상태: 배송완료 — 2026-03-05 14:32 수령인 인도 완료";
-		}
-		if (trackingNumber.contains("TRACK-1002")) {
-			return "TRACK-1002 배송 상태: 배송중 — 현재 서울 물류센터에서 출발 (2026-03-12 09:15)";
-		}
-		if (trackingNumber.contains("TRACK-1003")) {
-			return "TRACK-1003 배송 상태: 배송준비중 — 아직 발송되지 않았습니다";
-		}
-		return "해당 운송장번호의 배송 정보를 찾을 수 없습니다.";
+		return switch (trackingNumber) {
+			case String s when s.contains("TRACK-1001") -> "TRACK-1001 배송 상태: 배송완료 — 2026-03-05 14:32 수령인 인도 완료";
+			case String s when s.contains("TRACK-1002") -> "TRACK-1002 배송 상태: 배송중 — 현재 서울 물류센터에서 출발 (2026-03-12 09:15)";
+			case String s when s.contains("TRACK-1003") -> "TRACK-1003 배송 상태: 배송준비중 — 아직 발송되지 않았습니다";
+			default -> "해당 운송장번호의 배송 정보를 찾을 수 없습니다.";
+		};
 	}
 
 }

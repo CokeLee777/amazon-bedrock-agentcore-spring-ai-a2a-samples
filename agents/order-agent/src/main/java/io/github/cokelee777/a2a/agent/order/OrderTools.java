@@ -57,19 +57,12 @@ public class OrderTools {
 	@Tool(description = "주문 취소 가능 여부 확인. 주문 상태와 결제 에이전트에서 조회한 결제 상태를 함께 반환합니다.")
 	public String checkOrderCancellability(
 			@ToolParam(description = "취소 가능 여부를 확인할 주문번호 (예: ORD-1001)") String orderNumber) {
-		String orderState;
-		if (orderNumber.contains("ORD-1001")) {
-			orderState = "ORD-1001 주문 상태: 배송완료";
-		}
-		else if (orderNumber.contains("ORD-1002")) {
-			orderState = "ORD-1002 주문 상태: 배송중 (배송 준비 단계)";
-		}
-		else if (orderNumber.contains("ORD-1003")) {
-			orderState = "ORD-1003 주문 상태: 결제완료";
-		}
-		else {
-			return "해당 주문번호를 찾을 수 없습니다.";
-		}
+		String orderState = switch (orderNumber) {
+			case String s when s.contains("ORD-1001") -> "ORD-1001 주문 상태: 배송완료";
+			case String s when s.contains("ORD-1002") -> "ORD-1002 주문 상태: 배송중 (배송 준비 단계)";
+			case String s when s.contains("ORD-1003") -> "ORD-1003 주문 상태: 결제완료";
+			default -> "해당 주문번호를 찾을 수 없습니다.";
+		};
 
 		String paymentStatus = this.paymentAgentClient.send("주문번호 " + orderNumber + "의 결제 상태를 조회해주세요.");
 
