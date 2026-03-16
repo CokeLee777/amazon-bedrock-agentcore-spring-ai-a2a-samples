@@ -94,11 +94,11 @@ SPRING_PROFILES_ACTIVE=local ./gradlew :agents:host-agent:bootRun
 
 ```bash
 # 다운스트림 에이전트
-docker buildx build --platform linux/amd64 \
+docker buildx build --platform linux/arm64 \
   -f agents/order-agent/Dockerfile -t order-agent:latest .
-docker buildx build --platform linux/amd64 \
+docker buildx build --platform linux/arm64 \
   -f agents/delivery-agent/Dockerfile -t delivery-agent:latest .
-docker buildx build --platform linux/amd64 \
+docker buildx build --platform linux/arm64 \
   -f agents/payment-agent/Dockerfile -t payment-agent:latest .
 
 # host-agent (AgentCore 배포 → ARM64 필수)
