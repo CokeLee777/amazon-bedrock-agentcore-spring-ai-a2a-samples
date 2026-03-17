@@ -6,6 +6,7 @@ import io.github.cokelee777.agent.common.A2ATransport;
 import io.github.cokelee777.agent.common.LazyAgentCard;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
+import org.springframework.util.Assert;
 
 /**
  * A2A client for communicating with the Payment Agent.
@@ -35,6 +36,8 @@ public class PaymentAgentClient {
 	 * @return the payment agent's response, or an error message if unavailable
 	 */
 	public String send(String task) {
+		Assert.hasText(task, "task must not be blank");
+
 		return this.lazyCard.get().map(card -> {
 			Message message = A2A.toUserMessage(task);
 			return A2ATransport.send(card, message);

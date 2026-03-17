@@ -1,5 +1,7 @@
 package io.github.cokelee777.a2a.agent.host;
 
+import jakarta.validation.Valid;
+import jakarta.validation.constraints.NotBlank;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.ai.chat.client.ChatClient;
@@ -63,7 +65,7 @@ public class InvocationsController {
 	 * @return the generated response text from the LLM
 	 */
 	@PostMapping(path = "/invocations")
-	public String invoke(@RequestBody InvocationRequest request) {
+	public String invoke(@Valid @RequestBody InvocationRequest request) {
 		log.info("Received: {}", request.prompt());
 		String systemPrompt = String.format(ROUTING_SYSTEM_PROMPT, this.connections.getAgentDescriptions());
 		String response = this.chatClient.prompt().system(systemPrompt).user(request.prompt()).call().content();
@@ -76,7 +78,7 @@ public class InvocationsController {
 	 *
 	 * @param prompt the user prompt that should be processed by the agent
 	 */
-	public record InvocationRequest(String prompt) {
+	public record InvocationRequest(@NotBlank(message = "prompt must no be blank") String prompt) {
 
 	}
 
