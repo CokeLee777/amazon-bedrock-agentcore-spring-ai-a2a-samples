@@ -5,7 +5,7 @@ plugins {
     id("io.spring.javaformat") version "0.0.47" apply false
 }
 
-val springAiVersion by extra("1.1.2")
+val springAiVersion by extra("1.1.3")
 val awsSdkVersion by extra("2.42.9")
 val a2aVersion by extra("0.3.3.Final")
 val jspecifyVersion by extra("1.0.0")
