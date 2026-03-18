@@ -30,7 +30,7 @@ public class HostAgentApplication {
 	 * Starts the Orchestrator.
 	 * @param args command-line arguments
 	 */
-	static void main(String[] args) {
+	public static void main(String[] args) {
 		SpringApplication.run(HostAgentApplication.class, args);
 	}
 

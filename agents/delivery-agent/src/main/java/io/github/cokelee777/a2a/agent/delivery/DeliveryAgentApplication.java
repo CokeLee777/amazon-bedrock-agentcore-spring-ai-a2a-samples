@@ -34,7 +34,7 @@ public class DeliveryAgentApplication {
 	 * Starts the Delivery Agent.
 	 * @param args command-line arguments
 	 */
-	static void main(String[] args) {
+	public static void main(String[] args) {
 		SpringApplication.run(DeliveryAgentApplication.class, args);
 	}
 

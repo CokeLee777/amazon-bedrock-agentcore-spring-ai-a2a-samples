@@ -42,7 +42,7 @@ public class OrderAgentApplication {
 	 * Starts the Order Agent.
 	 * @param args command-line arguments
 	 */
-	static void main(String[] args) {
+	public static void main(String[] args) {
 		SpringApplication.run(OrderAgentApplication.class, args);
 	}
 

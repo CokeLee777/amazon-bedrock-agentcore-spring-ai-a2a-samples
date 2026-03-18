@@ -162,7 +162,7 @@ public class A2AServerAutoConfiguration {
 	 */
 	@Bean
 	@ConditionalOnMissingBean
-	public SpringA2AConfigProvider springA2AConfigProvider(Environment environment,
+	public SpringA2AConfigProvider configProvider(Environment environment,
 			DefaultValuesConfigProvider defaultValuesConfigProvider) {
 		logAutoConfig("SpringA2AConfigProvider", "configuration");
 		return new SpringA2AConfigProvider(environment, defaultValuesConfigProvider);
@@ -173,11 +173,11 @@ public class A2AServerAutoConfiguration {
 	 */
 	@Bean
 	@ConditionalOnMissingBean(name = "a2aInternalExecutor")
-	public Executor a2aInternalExecutor(SpringA2AConfigProvider springA2AConfigProvider) {
+	public Executor a2aInternalExecutor(SpringA2AConfigProvider configProvider) {
 		logAutoConfig("A2A internal executor", "async agent operations");
-		int corePoolSize = Integer.parseInt(springA2AConfigProvider.getValue("a2a.executor.core-pool-size"));
-		int maxPoolSize = Integer.parseInt(springA2AConfigProvider.getValue("a2a.executor.max-pool-size"));
-		long keepAliveSeconds = Long.parseLong(springA2AConfigProvider.getValue("a2a.executor.keep-alive-seconds"));
+		int corePoolSize = Integer.parseInt(configProvider.getValue("a2a.executor.core-pool-size"));
+		int maxPoolSize = Integer.parseInt(configProvider.getValue("a2a.executor.max-pool-size"));
+		long keepAliveSeconds = Long.parseLong(configProvider.getValue("a2a.executor.keep-alive-seconds"));
 
 		log.debug("A2A internal executor: corePoolSize={}, maxPoolSize={}, keepAliveSeconds={}", corePoolSize,
 				maxPoolSize, keepAliveSeconds);

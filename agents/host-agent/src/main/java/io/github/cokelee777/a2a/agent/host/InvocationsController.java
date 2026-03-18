@@ -70,7 +70,7 @@ public class InvocationsController {
 		String systemPrompt = String.format(ROUTING_SYSTEM_PROMPT, connections.getAgentDescriptions());
 		String response = chatClient.prompt().system(systemPrompt).user(request.prompt()).call().content();
 		log.info("Response: {}", response);
-		return response;
+		return response != null ? response : "";
 	}
 
 	/**
