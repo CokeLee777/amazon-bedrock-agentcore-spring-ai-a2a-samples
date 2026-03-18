@@ -18,16 +18,16 @@ class OrderToolsTest {
 
 	@BeforeEach
 	void setUp() {
-		this.deliveryAgentClient = mock(DeliveryAgentClient.class);
-		this.paymentAgentClient = mock(PaymentAgentClient.class);
-		this.tools = new OrderTools(this.deliveryAgentClient, this.paymentAgentClient);
+		deliveryAgentClient = mock(DeliveryAgentClient.class);
+		paymentAgentClient = mock(PaymentAgentClient.class);
+		tools = new OrderTools(deliveryAgentClient, paymentAgentClient);
 	}
 
 	@Test
 	void getOrderList_returnsAllOrdersWithDeliveryStatus() {
-		when(this.deliveryAgentClient.send(anyString())).thenReturn("배송완료");
+		when(deliveryAgentClient.send(anyString())).thenReturn("배송완료");
 
-		String result = this.tools.getOrderList();
+		String result = tools.getOrderList();
 
 		assertThat(result).contains("ORD-1001").contains("ORD-1002").contains("ORD-1003");
 		assertThat(result).contains("TRACK-1001").contains("TRACK-1002").contains("TRACK-1003");
@@ -36,36 +36,34 @@ class OrderToolsTest {
 
 	@Test
 	void checkOrderCancellability_ord1001_returnsOrderAndPaymentStatus() {
-		when(this.paymentAgentClient.send(anyString()))
-			.thenReturn("ORD-1001 결제 상태: 결제완료 — 1,500,000원 (카드결제, 2026-03-01)");
+		when(paymentAgentClient.send(anyString())).thenReturn("ORD-1001 결제 상태: 결제완료 — 1,500,000원 (카드결제, 2026-03-01)");
 
-		String result = this.tools.checkOrderCancellability("ORD-1001");
+		String result = tools.checkOrderCancellability("ORD-1001");
 
 		assertThat(result).contains("ORD-1001").contains("배송완료").contains("결제완료");
 	}
 
 	@Test
 	void checkOrderCancellability_ord1002_returnsOrderAndPaymentStatus() {
-		when(this.paymentAgentClient.send(anyString())).thenReturn("ORD-1002 결제 상태: 결제완료 — 45,000원 (카드결제, 2026-03-10)");
+		when(paymentAgentClient.send(anyString())).thenReturn("ORD-1002 결제 상태: 결제완료 — 45,000원 (카드결제, 2026-03-10)");
 
-		String result = this.tools.checkOrderCancellability("ORD-1002");
+		String result = tools.checkOrderCancellability("ORD-1002");
 
 		assertThat(result).contains("ORD-1002").contains("배송중").contains("결제완료");
 	}
 
 	@Test
 	void checkOrderCancellability_ord1003_returnsOrderAndPaymentStatus() {
-		when(this.paymentAgentClient.send(anyString()))
-			.thenReturn("ORD-1003 결제 상태: 결제완료 — 120,000원 (간편결제, 2026-03-12)");
+		when(paymentAgentClient.send(anyString())).thenReturn("ORD-1003 결제 상태: 결제완료 — 120,000원 (간편결제, 2026-03-12)");
 
-		String result = this.tools.checkOrderCancellability("ORD-1003");
+		String result = tools.checkOrderCancellability("ORD-1003");
 
 		assertThat(result).contains("ORD-1003").contains("결제완료");
 	}
 
 	@Test
 	void checkOrderCancellability_unknown_returnsNotFound() {
-		String result = this.tools.checkOrderCancellability("ORD-9999");
+		String result = tools.checkOrderCancellability("ORD-9999");
 
 		assertThat(result).contains("찾을 수 없습니다");
 	}

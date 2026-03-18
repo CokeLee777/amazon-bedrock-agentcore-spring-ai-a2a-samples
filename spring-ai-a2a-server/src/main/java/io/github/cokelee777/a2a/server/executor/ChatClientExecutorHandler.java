@@ -17,6 +17,7 @@
 package io.github.cokelee777.a2a.server.executor;
 
 import io.a2a.server.agentexecution.RequestContext;
+import org.jspecify.annotations.Nullable;
 import org.springframework.ai.chat.client.ChatClient;
 
 /**
@@ -37,6 +38,6 @@ public interface ChatClientExecutorHandler {
 	 * IDs
 	 * @return the response text
 	 */
-	String execute(ChatClient chatClient, RequestContext requestContext);
+	@Nullable String execute(ChatClient chatClient, RequestContext requestContext);
 
 }

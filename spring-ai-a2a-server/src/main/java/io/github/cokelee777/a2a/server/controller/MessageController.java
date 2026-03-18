@@ -40,7 +40,7 @@ public class MessageController {
 			ServerCallContext context = new ServerCallContext(null, Map.of(), Set.of());
 
 			// Delegate to SDK's RequestHandler - handles all protocol logic
-			EventKind result = this.requestHandler.onMessageSend(params, context);
+			EventKind result = requestHandler.onMessageSend(params, context);
 
 			log.debug("Message processed successfully - id: {}", request.getId());
 			return new SendMessageResponse(request.getId(), result);

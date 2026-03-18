@@ -22,8 +22,8 @@ public class AgentCardController {
 	 */
 	@GetMapping(path = "/.well-known/agent-card.json", produces = MediaType.APPLICATION_JSON_VALUE)
 	public AgentCard getAgentCard() {
-		log.debug("Serving agent card: {}", this.agentCard.name());
-		return this.agentCard;
+		log.debug("Serving agent card: {}", agentCard.name());
+		return agentCard;
 	}
 
 }

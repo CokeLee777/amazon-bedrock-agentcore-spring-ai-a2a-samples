@@ -3,6 +3,7 @@ package io.github.cokelee777.agent.common;
 import io.a2a.A2A;
 import io.a2a.spec.AgentCard;
 import lombok.extern.slf4j.Slf4j;
+import org.jspecify.annotations.Nullable;
 
 import java.net.URI;
 import java.util.Optional;
@@ -33,7 +34,7 @@ public class LazyAgentCard {
 
 	private final String agentUrl;
 
-	private volatile AgentCard card;
+	private @Nullable volatile AgentCard card;
 
 	/**
 	 * Creates a {@link LazyAgentCard} for the given URL and immediately attempts to fetch
@@ -58,10 +59,10 @@ public class LazyAgentCard {
 	 * is still unreachable
 	 */
 	public Optional<AgentCard> get() {
-		if (this.card == null) {
+		if (card == null) {
 			tryFetch();
 		}
-		return Optional.ofNullable(this.card);
+		return Optional.ofNullable(card);
 	}
 
 	/**
@@ -76,17 +77,17 @@ public class LazyAgentCard {
 	 * loaded
 	 */
 	public Optional<AgentCard> peek() {
-		return Optional.ofNullable(this.card);
+		return Optional.ofNullable(card);
 	}
 
 	private void tryFetch() {
 		try {
-			String path = new URI(this.agentUrl).getPath();
-			this.card = A2A.getAgentCard(this.agentUrl, path + ".well-known/agent-card.json", null);
-			log.info("Resolved agent card '{}' from {}", this.card.name(), this.agentUrl);
+			String path = new URI(agentUrl).getPath();
+			card = A2A.getAgentCard(agentUrl, path + ".well-known/agent-card.json", null);
+			log.info("Resolved agent card '{}' from {}", card.name(), agentUrl);
 		}
 		catch (Exception e) {
-			log.warn("Failed to resolve agent card from {}: {}", this.agentUrl, e.getMessage());
+			log.warn("Failed to resolve agent card from {}: {}", agentUrl, e.getMessage());
 		}
 	}
 

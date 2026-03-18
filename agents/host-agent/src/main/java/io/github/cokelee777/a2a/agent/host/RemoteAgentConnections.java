@@ -6,6 +6,7 @@ import io.a2a.spec.Message;
 import io.github.cokelee777.agent.common.A2ATransport;
 import io.github.cokelee777.agent.common.LazyAgentCard;
 import lombok.extern.slf4j.Slf4j;
+import org.jspecify.annotations.Nullable;
 import org.springframework.ai.tool.annotation.Tool;
 import org.springframework.ai.tool.annotation.ToolParam;
 import org.springframework.stereotype.Component;
@@ -41,7 +42,7 @@ public class RemoteAgentConnections {
 	 * @param properties the remote agent connection properties
 	 */
 	public RemoteAgentConnections(RemoteAgentProperties properties) {
-		properties.agents().forEach((key, value) -> this.lazyCards.put(key, new LazyAgentCard(value.url())));
+		properties.agents().forEach((key, value) -> lazyCards.put(key, new LazyAgentCard(value.url())));
 	}
 
 	/**
@@ -83,8 +84,8 @@ public class RemoteAgentConnections {
 	 * Finds a loaded {@link AgentCard} by its name, triggering lazy resolution for all
 	 * unloaded cards.
 	 */
-	private AgentCard findByName(String agentName) {
-		return this.lazyCards.values()
+	private @Nullable AgentCard findByName(String agentName) {
+		return lazyCards.values()
 			.stream()
 			.map(LazyAgentCard::get)
 			.flatMap(java.util.Optional::stream)
@@ -94,7 +95,7 @@ public class RemoteAgentConnections {
 	}
 
 	private List<AgentCard> loadedCards() {
-		return this.lazyCards.values().stream().map(LazyAgentCard::peek).flatMap(java.util.Optional::stream).toList();
+		return lazyCards.values().stream().map(LazyAgentCard::peek).flatMap(java.util.Optional::stream).toList();
 	}
 
 }

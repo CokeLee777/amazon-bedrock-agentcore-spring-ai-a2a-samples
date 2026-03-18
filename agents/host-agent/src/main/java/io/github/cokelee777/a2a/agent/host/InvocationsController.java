@@ -67,8 +67,8 @@ public class InvocationsController {
 	@PostMapping(path = "/invocations")
 	public String invoke(@Valid @RequestBody InvocationRequest request) {
 		log.info("Received: {}", request.prompt());
-		String systemPrompt = String.format(ROUTING_SYSTEM_PROMPT, this.connections.getAgentDescriptions());
-		String response = this.chatClient.prompt().system(systemPrompt).user(request.prompt()).call().content();
+		String systemPrompt = String.format(ROUTING_SYSTEM_PROMPT, connections.getAgentDescriptions());
+		String response = chatClient.prompt().system(systemPrompt).user(request.prompt()).call().content();
 		log.info("Response: {}", response);
 		return response;
 	}

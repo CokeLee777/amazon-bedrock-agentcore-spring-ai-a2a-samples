@@ -41,7 +41,7 @@ public class TaskController {
 			ServerCallContext context = new ServerCallContext(null, Map.of(), Set.of());
 			TaskQueryParams params = new TaskQueryParams(taskId);
 
-			Task task = this.requestHandler.onGetTask(params, context);
+			Task task = requestHandler.onGetTask(params, context);
 			log.debug("Task retrieved: {} - state: {}", taskId, task.getStatus().state());
 			return task;
 		}
@@ -67,7 +67,7 @@ public class TaskController {
 			ServerCallContext context = new ServerCallContext(null, Map.of(), Set.of());
 			TaskIdParams params = new TaskIdParams(taskId);
 
-			Task task = this.requestHandler.onCancelTask(params, context);
+			Task task = requestHandler.onCancelTask(params, context);
 			log.debug("Task cancelled: {}", taskId);
 			return task;
 		}

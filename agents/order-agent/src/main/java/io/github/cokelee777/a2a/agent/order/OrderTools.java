@@ -33,9 +33,9 @@ public class OrderTools {
 	 */
 	@Tool(description = "현재 회원의 주문 내역 목록 조회. 각 주문의 최신 배송 상태를 배송 에이전트에서 실시간으로 가져옵니다.")
 	public String getOrderList() {
-		String deliveryStatus1001 = this.deliveryAgentClient.send("운송장번호 TRACK-1001의 배송 상태를 조회해주세요.");
-		String deliveryStatus1002 = this.deliveryAgentClient.send("운송장번호 TRACK-1002의 배송 상태를 조회해주세요.");
-		String deliveryStatus1003 = this.deliveryAgentClient.send("운송장번호 TRACK-1003의 배송 상태를 조회해주세요.");
+		String deliveryStatus1001 = deliveryAgentClient.send("운송장번호 TRACK-1001의 배송 상태를 조회해주세요.");
+		String deliveryStatus1002 = deliveryAgentClient.send("운송장번호 TRACK-1002의 배송 상태를 조회해주세요.");
+		String deliveryStatus1003 = deliveryAgentClient.send("운송장번호 TRACK-1003의 배송 상태를 조회해주세요.");
 
 		return """
 				[주문 내역]
@@ -64,7 +64,7 @@ public class OrderTools {
 			default -> "해당 주문번호를 찾을 수 없습니다.";
 		};
 
-		String paymentStatus = this.paymentAgentClient.send("주문번호 " + orderNumber + "의 결제 상태를 조회해주세요.");
+		String paymentStatus = paymentAgentClient.send("주문번호 " + orderNumber + "의 결제 상태를 조회해주세요.");
 
 		return orderState + "\n" + paymentStatus;
 	}

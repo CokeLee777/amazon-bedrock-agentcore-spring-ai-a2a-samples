@@ -27,7 +27,7 @@ public class DeliveryAgentClient {
 	 * @param properties the remote agent connection properties
 	 */
 	public DeliveryAgentClient(RemoteAgentProperties properties) {
-		this.lazyCard = new LazyAgentCard(properties.agents().get("delivery-agent").url());
+		lazyCard = new LazyAgentCard(properties.agents().get("delivery-agent").url());
 	}
 
 	/**
@@ -38,7 +38,7 @@ public class DeliveryAgentClient {
 	public String send(String task) {
 		Assert.hasText(task, "task must not be blank");
 
-		return this.lazyCard.get().map(card -> {
+		return lazyCard.get().map(card -> {
 			Message message = A2A.toUserMessage(task);
 			return A2ATransport.send(card, message);
 		}).orElse("배송 에이전트에 연결할 수 없습니다.");

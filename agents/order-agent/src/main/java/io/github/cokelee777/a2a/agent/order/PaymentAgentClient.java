@@ -27,7 +27,7 @@ public class PaymentAgentClient {
 	 * @param properties the remote agent connection properties
 	 */
 	public PaymentAgentClient(RemoteAgentProperties properties) {
-		this.lazyCard = new LazyAgentCard(properties.agents().get("payment-agent").url());
+		lazyCard = new LazyAgentCard(properties.agents().get("payment-agent").url());
 	}
 
 	/**
@@ -38,7 +38,7 @@ public class PaymentAgentClient {
 	public String send(String task) {
 		Assert.hasText(task, "task must not be blank");
 
-		return this.lazyCard.get().map(card -> {
+		return lazyCard.get().map(card -> {
 			Message message = A2A.toUserMessage(task);
 			return A2ATransport.send(card, message);
 		}).orElse("결제 에이전트에 연결할 수 없습니다.");
