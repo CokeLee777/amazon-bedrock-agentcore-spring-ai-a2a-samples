@@ -6,6 +6,7 @@ import io.a2a.server.events.InMemoryQueueManager;
 import io.a2a.server.events.QueueManager;
 import io.a2a.server.requesthandlers.DefaultRequestHandler;
 import io.a2a.server.requesthandlers.RequestHandler;
+import io.a2a.server.tasks.BasePushNotificationSender;
 import io.a2a.server.tasks.InMemoryPushNotificationConfigStore;
 import io.a2a.server.tasks.InMemoryTaskStore;
 import io.a2a.server.tasks.PushNotificationConfigStore;
@@ -106,6 +107,7 @@ public class A2AServerAutoConfiguration {
 	@ConditionalOnMissingBean
 	public TaskStore taskStore() {
 		logAutoConfig("InMemoryTaskStore", "task management");
+		// TODO: Should implements Custom Memory Task Store
 		return new InMemoryTaskStore();
 	}
 
@@ -139,6 +141,7 @@ public class A2AServerAutoConfiguration {
 	@ConditionalOnMissingBean
 	public QueueManager queueManager(TaskStore taskStore) {
 		logAutoConfig("InMemoryQueueManager", "event queue management");
+		// TODO: Should implements Custom QueueManager
 		return new InMemoryQueueManager((TaskStateProvider) taskStore);
 	}
 
@@ -149,17 +152,19 @@ public class A2AServerAutoConfiguration {
 	@ConditionalOnMissingBean
 	public PushNotificationConfigStore pushNotificationConfigStore() {
 		logAutoConfig("InMemoryPushNotificationConfigStore", "push notification config store");
+		// TODO: Should implements Custom PushNotificationConfigStore
 		return new InMemoryPushNotificationConfigStore();
 	}
 
 	/**
-	 * Provide default PushNotificationSender (no-op).
+	 * Provide default PushNotificationSender (BasePushNotificationSender).
 	 */
 	@Bean
 	@ConditionalOnMissingBean
-	public PushNotificationSender pushNotificationSender() {
-		logAutoConfig("PushNotificationSender", "no-op push notifications");
-		return task -> log.debug("Push notification requested for task {} but sender is disabled", task.getId());
+	public PushNotificationSender pushNotificationSender(PushNotificationConfigStore pushNotificationConfigStore) {
+		logAutoConfig("BasePushNotificationSender", "push notification sender");
+		// TODO: Should implements Custom PushNotificationSender
+		return new BasePushNotificationSender(pushNotificationConfigStore);
 	}
 
 	/**
