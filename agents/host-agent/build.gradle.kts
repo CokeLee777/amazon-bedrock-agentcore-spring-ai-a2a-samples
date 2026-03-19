@@ -5,4 +5,5 @@ dependencies {
     implementation("org.springframework.ai:spring-ai-starter-model-bedrock-converse")
     implementation("org.springframework.ai:spring-ai-client-chat")
     implementation("software.amazon.awssdk:bedrockagentcore")
+    implementation("software.amazon.awssdk:bedrockagentcorecontrol")
 }
