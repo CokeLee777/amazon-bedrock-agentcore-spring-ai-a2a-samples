@@ -31,10 +31,8 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.core.env.Environment;
 
 import java.util.concurrent.Executor;
-import java.util.concurrent.LinkedBlockingQueue;
-import java.util.concurrent.ThreadPoolExecutor;
-import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ThreadFactory;
 
 /**
  * Spring Boot auto-configuration for A2A Server.
@@ -168,29 +166,23 @@ public class A2AServerAutoConfiguration {
 	}
 
 	/**
-	 * Provide internal executor for async agent operations.
+	 * Provide executor for async agent operations using virtual threads.
+	 *
+	 * <p>
+	 * Virtual threads are well-suited for A2A agent tasks, which are I/O-bound (LLM
+	 * calls, downstream agent calls). Each task gets its own virtual thread without the
+	 * overhead of a fixed thread pool.
+	 *
+	 * <p>
+	 * Note: Virtual threads are always daemon threads by JVM design. Graceful shutdown of
+	 * in-flight tasks is managed by Spring Boot's lifecycle hooks instead.
 	 */
 	@Bean
-	@ConditionalOnMissingBean(name = "a2aInternalExecutor")
-	public Executor a2aInternalExecutor(SpringA2AConfigProvider configProvider) {
-		logAutoConfig("A2A internal executor", "async agent operations");
-		int corePoolSize = Integer.parseInt(configProvider.getValue("a2a.executor.core-pool-size"));
-		int maxPoolSize = Integer.parseInt(configProvider.getValue("a2a.executor.max-pool-size"));
-		long keepAliveSeconds = Long.parseLong(configProvider.getValue("a2a.executor.keep-alive-seconds"));
-
-		log.debug("A2A internal executor: corePoolSize={}, maxPoolSize={}, keepAliveSeconds={}", corePoolSize,
-				maxPoolSize, keepAliveSeconds);
-
-		AtomicInteger threadCounter = new AtomicInteger(1);
-		// Non-daemon threads as per A2A spec
-
-		return new ThreadPoolExecutor(corePoolSize, maxPoolSize, keepAliveSeconds, TimeUnit.SECONDS,
-				new LinkedBlockingQueue<>(), runnable -> {
-					Thread thread = new Thread(runnable);
-					thread.setName("a2a-agent-executor-" + threadCounter.getAndIncrement());
-					thread.setDaemon(false); // Non-daemon threads as per A2A spec
-					return thread;
-				});
+	@ConditionalOnMissingBean(name = "a2aTaskExecutor")
+	public Executor a2aTaskExecutor() {
+		logAutoConfig("A2A task executor", "async agent operations (virtual threads)");
+		ThreadFactory factory = Thread.ofVirtual().name("a2a-task-", 1).factory();
+		return Executors.newThreadPerTaskExecutor(factory);
 	}
 
 	/**
@@ -204,7 +196,7 @@ public class A2AServerAutoConfiguration {
 	@ConditionalOnMissingBean
 	public RequestHandler requestHandler(AgentExecutor agentExecutor, TaskStore taskStore, QueueManager queueManager,
 			PushNotificationConfigStore pushConfigStore, PushNotificationSender pushSender,
-			@Qualifier("a2aInternalExecutor") Executor executor) {
+			@Qualifier("a2aTaskExecutor") Executor executor) {
 		logAutoConfig("DefaultRequestHandler", "A2A request handling");
 		return DefaultRequestHandler.create(agentExecutor, taskStore, queueManager, pushConfigStore, pushSender,
 				executor);
