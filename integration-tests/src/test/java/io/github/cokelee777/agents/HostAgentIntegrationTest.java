@@ -37,7 +37,7 @@ import static org.mockito.Mockito.when;
  */
 @SpringBootTest(classes = HostAgentApplication.class, webEnvironment = SpringBootTest.WebEnvironment.DEFINED_PORT,
 		properties = { "server.port=18080", "spring.ai.a2a.server.enabled=false",
-				"aws.bedrock.agentcore.memory.mode=none", "remote.agents.order-agent.url=http://localhost:19901",
+				"aws.bedrock.agent-core.memory.mode=none", "remote.agents.order-agent.url=http://localhost:19901",
 				"remote.agents.delivery-agent.url=http://localhost:19902",
 				"remote.agents.payment-agent.url=http://localhost:19903",
 				"spring.autoconfigure.exclude=org.springframework.ai.model.bedrock.converse.autoconfigure.BedrockConverseProxyChatAutoConfiguration" })

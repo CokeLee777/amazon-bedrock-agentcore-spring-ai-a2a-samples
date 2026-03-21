@@ -9,10 +9,10 @@ spring:
       converse:
         chat:
           options:
-            model: ${BEDROCK_MODEL_ID:arn:aws:bedrock:ap-northeast-2:<ACCOUNT_ID>:inference-profile/apac.amazon.nova-lite-v1:0}
+            model: ${BEDROCK_MODEL_ID:}
     a2a:
       server:
         enabled: true
 
 a2a:
-  agent-url: ${AGENT_URL:arn:aws:bedrock-agentcore:ap-northeast-2:<ACCOUNT_ID>:runtime/delivery-agent}
+  agent-url: ${AGENT_URL:}

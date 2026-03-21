@@ -7,7 +7,7 @@ import java.util.List;
  * No-operation implementation of {@link LongTermMemoryService}.
  *
  * <p>
- * Used when {@code aws.bedrock.agentcore.memory.mode} is {@code none} or
+ * Used when {@code aws.bedrock.agent-core.memory.mode} is {@code none} or
  * {@code short_term}. Always returns an empty list.
  * </p>
  */

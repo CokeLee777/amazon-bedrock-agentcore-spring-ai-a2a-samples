@@ -4,12 +4,14 @@ import org.jspecify.annotations.Nullable;
 import org.springframework.ai.chat.messages.AssistantMessage;
 import org.springframework.ai.chat.messages.Message;
 import org.springframework.ai.chat.messages.UserMessage;
+import org.springframework.util.Assert;
 import software.amazon.awssdk.services.bedrockagentcore.model.Event;
 import software.amazon.awssdk.services.bedrockagentcore.model.PayloadType;
 import software.amazon.awssdk.services.bedrockagentcore.model.Role;
 
 import java.util.Comparator;
 import java.util.List;
+import java.util.Objects;
 import java.util.function.Consumer;
 
 /**
@@ -37,6 +39,8 @@ public class AgentCoreEventToMessageConverter {
 	 * skipped
 	 */
 	public List<Message> toMessages(List<Event> events) {
+		Assert.notNull(events, "events must not be null");
+
 		return events.stream()
 			.sorted(Comparator.comparing(Event::eventTimestamp, Comparator.nullsLast(Comparator.naturalOrder())))
 			.mapMulti((Event event, Consumer<Message> downstream) -> {
@@ -64,10 +68,10 @@ public class AgentCoreEventToMessageConverter {
 		String text = payload.conversational().content() != null ? payload.conversational().content().text() : "";
 		Role role = payload.conversational().role();
 		if (Role.USER.equals(role)) {
-			return new UserMessage(text != null ? text : "");
+			return new UserMessage(Objects.requireNonNullElse(text, ""));
 		}
 		if (Role.ASSISTANT.equals(role)) {
-			return new AssistantMessage(text != null ? text : "");
+			return new AssistantMessage(Objects.requireNonNullElse(text, ""));
 		}
 		return null;
 	}

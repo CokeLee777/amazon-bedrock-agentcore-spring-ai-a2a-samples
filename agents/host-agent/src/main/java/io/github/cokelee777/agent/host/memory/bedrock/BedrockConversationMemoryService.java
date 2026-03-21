@@ -1,9 +1,9 @@
 package io.github.cokelee777.agent.host.memory.bedrock;
 
 import io.github.cokelee777.agent.host.memory.ConversationMemoryService;
-import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.ai.chat.messages.Message;
+import org.springframework.util.Assert;
 import software.amazon.awssdk.services.bedrockagentcore.BedrockAgentCoreClient;
 import software.amazon.awssdk.services.bedrockagentcore.model.Content;
 import software.amazon.awssdk.services.bedrockagentcore.model.Conversational;
@@ -17,6 +17,7 @@ import software.amazon.awssdk.services.bedrockagentcore.model.Role;
 import java.time.Instant;
 import java.util.Collections;
 import java.util.List;
+import java.util.Objects;
 
 /**
  * Amazon Bedrock AgentCore implementation of {@link ConversationMemoryService}.
@@ -33,7 +34,6 @@ import java.util.List;
  * </p>
  */
 @Slf4j
-@RequiredArgsConstructor
 public class BedrockConversationMemoryService implements ConversationMemoryService {
 
 	private final BedrockAgentCoreClient client;
@@ -41,6 +41,22 @@ public class BedrockConversationMemoryService implements ConversationMemoryServi
 	private final BedrockMemoryProperties properties;
 
 	private final AgentCoreEventToMessageConverter converter;
+
+	/**
+	 * Creates the service, asserting that {@code memoryId} is provided.
+	 * @param client the Bedrock client
+	 * @param properties the memory properties
+	 * @param converter the event-to-message converter
+	 */
+	public BedrockConversationMemoryService(BedrockAgentCoreClient client, BedrockMemoryProperties properties,
+			AgentCoreEventToMessageConverter converter) {
+		Assert.hasText(properties.memoryId(),
+				"aws.bedrock.agent-core.memory.memory-id must be set when mode is not 'none'");
+
+		this.client = client;
+		this.properties = properties;
+		this.converter = converter;
+	}
 
 	@Override
 	public List<Message> loadHistory(String actorId, String sessionId) {
@@ -53,7 +69,7 @@ public class BedrockConversationMemoryService implements ConversationMemoryServi
 				.maxResults(properties.shortTermMaxTurns() * 2)
 				.build();
 			ListEventsResponse response = client.listEvents(request);
-			List<Event> events = response.events() != null ? response.events() : Collections.emptyList();
+			List<Event> events = Objects.requireNonNullElse(response.events(), Collections.emptyList());
 			return converter.toMessages(events);
 		}
 		catch (Exception ex) {

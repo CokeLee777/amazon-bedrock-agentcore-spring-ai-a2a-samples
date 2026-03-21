@@ -1,7 +1,5 @@
 package io.github.cokelee777.a2a.server.autoconfigure;
 
-import lombok.Getter;
-import lombok.Setter;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 
 /**
@@ -19,17 +17,11 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
  *         enabled: true
  * </pre>
  *
+ * @param enabled whether the A2A server is enabled; defaults to {@code true}
  */
-@Setter
-@Getter
 @ConfigurationProperties(prefix = A2AServerProperties.CONFIG_PREFIX)
-public class A2AServerProperties {
+public record A2AServerProperties(boolean enabled) {
 
 	public static final String CONFIG_PREFIX = "spring.ai.a2a.server";
-
-	/**
-	 * Whether the A2A server is enabled.
-	 */
-	private boolean enabled = true;
 
 }

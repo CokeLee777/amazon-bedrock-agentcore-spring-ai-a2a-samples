@@ -1,5 +1,7 @@
 package io.github.cokelee777.agent.host.invocation;
 
+import org.springframework.util.Assert;
+
 /**
  * Response payload for {@code POST /invocations}.
  *
@@ -14,4 +16,9 @@ package io.github.cokelee777.agent.host.invocation;
  */
 public record InvocationResponse(String content, String sessionId, String actorId) {
 
+    public InvocationResponse {
+        Assert.hasText(content, "content must not be blank");
+        Assert.hasText(sessionId, "sessionId must not be blank");
+        Assert.hasText(actorId, "actorId must not be blank");
+    }
 }

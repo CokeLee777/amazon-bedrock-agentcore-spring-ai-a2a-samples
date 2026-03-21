@@ -93,7 +93,7 @@ public class DefaultInvocationService implements InvocationService {
 			.user(request.prompt())
 			.call()
 			.content();
-		String content = response != null ? response : "";
+		String content = Objects.requireNonNullElse(response, "");
 
 		// 4. Persist user and assistant turns after a successful ChatClient call.
 		if (mode != MemoryMode.NONE) {

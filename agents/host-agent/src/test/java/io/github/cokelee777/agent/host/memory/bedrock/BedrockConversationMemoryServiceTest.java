@@ -43,7 +43,7 @@ class BedrockConversationMemoryServiceTest {
 
 	@BeforeEach
 	void setUp() {
-		properties = new BedrockMemoryProperties("mem-1", MemoryMode.BOTH, 5, "strategy-1", 4);
+		properties = new BedrockMemoryProperties(MemoryMode.BOTH, "mem-1", "strategy-1", 5, 4);
 		converter = new AgentCoreEventToMessageConverter();
 		service = new BedrockConversationMemoryService(client, properties, converter);
 	}

@@ -17,7 +17,7 @@ import software.amazon.awssdk.services.bedrockagentcore.BedrockAgentCoreClient;
 
 /**
  * Registers Amazon Bedrock AgentCore Memory beans when
- * {@code aws.bedrock.agentcore.memory.mode} is not {@code none}.
+ * {@code aws.bedrock.agent-core.memory.mode} is not {@code none}.
  *
  * <p>
  * When mode is {@code short_term}, a {@link NoOpLongTermMemoryService} is registered.
@@ -26,7 +26,7 @@ import software.amazon.awssdk.services.bedrockagentcore.BedrockAgentCoreClient;
  * </p>
  */
 @Configuration
-@ConditionalOnExpression("!'none'.equalsIgnoreCase('${aws.bedrock.agentcore.memory.mode:both}')")
+@ConditionalOnExpression("!'none'.equalsIgnoreCase('${aws.bedrock.agent-core.memory.mode}')")
 @EnableConfigurationProperties(BedrockMemoryProperties.class)
 public class BedrockMemoryConfiguration {
 
@@ -36,8 +36,7 @@ public class BedrockMemoryConfiguration {
 	 * @return the Bedrock AgentCore data-plane client
 	 */
 	@Bean
-	public BedrockAgentCoreClient bedrockAgentCoreClient(
-			@Value("${spring.ai.bedrock.aws.region:${BEDROCK_REGION:ap-northeast-2}}") String region) {
+	public BedrockAgentCoreClient bedrockAgentCoreClient(@Value("${spring.ai.bedrock.aws.region}") String region) {
 		return BedrockAgentCoreClient.builder().region(Region.of(region)).build();
 	}
 
@@ -68,7 +67,7 @@ public class BedrockMemoryConfiguration {
 	 * @return a no-op implementation
 	 */
 	@Bean
-	@ConditionalOnProperty(name = "aws.bedrock.agentcore.memory.mode", havingValue = "short_term")
+	@ConditionalOnProperty(name = "aws.bedrock.agent-core.memory.mode", havingValue = "short_term")
 	public LongTermMemoryService noOpLongTermMemoryService() {
 		return new NoOpLongTermMemoryService();
 	}
@@ -81,7 +80,7 @@ public class BedrockMemoryConfiguration {
 	 * @return the service
 	 */
 	@Bean
-	@ConditionalOnExpression("'${aws.bedrock.agentcore.memory.mode:both}'.equalsIgnoreCase('long_term') or '${aws.bedrock.agentcore.memory.mode:both}'.equalsIgnoreCase('both')")
+	@ConditionalOnExpression("'${aws.bedrock.agent-core.memory.mode}'.equalsIgnoreCase('long_term') or '${aws.bedrock.agent-core.memory.mode}'.equalsIgnoreCase('both')")
 	public BedrockLongTermMemoryService bedrockLongTermMemoryService(BedrockAgentCoreClient client,
 			BedrockMemoryProperties properties) {
 		return new BedrockLongTermMemoryService(client, properties);

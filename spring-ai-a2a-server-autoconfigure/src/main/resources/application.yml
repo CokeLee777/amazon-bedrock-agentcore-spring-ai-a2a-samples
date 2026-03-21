@@ -5,6 +5,12 @@
 # - agent.timeout: max time to wait for agent execution (LLM, tools, downstream agents).
 # - consumption.timeout: max time to wait for event consumption/persistence (TaskStore update)
 #   before returning the response to the client.
+spring:
+  ai:
+    a2a:
+      server:
+        enabled: true
+
 a2a:
   blocking:
     agent:

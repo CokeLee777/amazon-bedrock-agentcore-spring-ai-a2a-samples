@@ -12,7 +12,7 @@ import org.springframework.context.annotation.Configuration;
 
 /**
  * Registers no-operation memory beans when
- * {@code aws.bedrock.agentcore.memory.mode=none}.
+ * {@code aws.bedrock.agent-core.memory.mode=none}.
  *
  * <p>
  * Allows the application to start without AWS credentials (e.g., local development). Also
@@ -21,7 +21,7 @@ import org.springframework.context.annotation.Configuration;
  * </p>
  */
 @Configuration
-@ConditionalOnProperty(name = "aws.bedrock.agentcore.memory.mode", havingValue = "none")
+@ConditionalOnProperty(name = "aws.bedrock.agent-core.memory.mode", havingValue = "none")
 @EnableConfigurationProperties(BedrockMemoryProperties.class)
 public class NoOpMemoryConfiguration {
 

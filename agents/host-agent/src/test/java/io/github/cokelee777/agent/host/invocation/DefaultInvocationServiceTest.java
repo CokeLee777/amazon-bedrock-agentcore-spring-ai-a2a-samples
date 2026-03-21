@@ -50,7 +50,7 @@ class DefaultInvocationServiceTest {
 
 	@Test
 	void modeNone_noMemoryCalls() {
-		BedrockMemoryProperties props = new BedrockMemoryProperties("mem", MemoryMode.NONE, 10, "strat", 4);
+		BedrockMemoryProperties props = new BedrockMemoryProperties(MemoryMode.NONE, "mem", "strat", 10, 4);
 		DefaultInvocationService service = new DefaultInvocationService(conversationMemoryService,
 				longTermMemoryService, chatClient, connections, props);
 		setupChatClientChain("reply");
@@ -65,7 +65,7 @@ class DefaultInvocationServiceTest {
 
 	@Test
 	void modeShortTerm_loadsHistoryAndSavesTurnsAfterChatClient() {
-		BedrockMemoryProperties props = new BedrockMemoryProperties("mem", MemoryMode.SHORT_TERM, 10, "strat", 4);
+		BedrockMemoryProperties props = new BedrockMemoryProperties(MemoryMode.SHORT_TERM, "mem", "strat", 10, 4);
 		DefaultInvocationService service = new DefaultInvocationService(conversationMemoryService,
 				longTermMemoryService, chatClient, connections, props);
 		when(conversationMemoryService.loadHistory(anyString(), anyString()))
@@ -85,7 +85,7 @@ class DefaultInvocationServiceTest {
 
 	@Test
 	void modeLongTerm_retrievesRelevantAndSavesTurns() {
-		BedrockMemoryProperties props = new BedrockMemoryProperties("mem", MemoryMode.LONG_TERM, 10, "strat", 4);
+		BedrockMemoryProperties props = new BedrockMemoryProperties(MemoryMode.LONG_TERM, "mem", "strat", 10, 4);
 		DefaultInvocationService service = new DefaultInvocationService(conversationMemoryService,
 				longTermMemoryService, chatClient, connections, props);
 		when(longTermMemoryService.retrieveRelevant(anyString(), anyString())).thenReturn(List.of("past info"));
@@ -101,7 +101,7 @@ class DefaultInvocationServiceTest {
 
 	@Test
 	void chatClientFailure_noMemorySaved() {
-		BedrockMemoryProperties props = new BedrockMemoryProperties("mem", MemoryMode.BOTH, 10, "strat", 4);
+		BedrockMemoryProperties props = new BedrockMemoryProperties(MemoryMode.BOTH, "mem", "strat", 10, 4);
 		DefaultInvocationService service = new DefaultInvocationService(conversationMemoryService,
 				longTermMemoryService, chatClient, connections, props);
 		when(conversationMemoryService.loadHistory(anyString(), anyString())).thenReturn(List.of());
@@ -123,7 +123,7 @@ class DefaultInvocationServiceTest {
 
 	@Test
 	void noSessionId_generatesNewSessionIdInResponse() {
-		BedrockMemoryProperties props = new BedrockMemoryProperties("mem", MemoryMode.NONE, 10, "strat", 4);
+		BedrockMemoryProperties props = new BedrockMemoryProperties(MemoryMode.NONE, "mem", "strat", 10, 4);
 		DefaultInvocationService service = new DefaultInvocationService(conversationMemoryService,
 				longTermMemoryService, chatClient, connections, props);
 		setupChatClientChain("hi");
@@ -137,7 +137,7 @@ class DefaultInvocationServiceTest {
 
 	@Test
 	void providedSessionId_returnsSameSessionIdInResponse() {
-		BedrockMemoryProperties props = new BedrockMemoryProperties("mem", MemoryMode.NONE, 10, "strat", 4);
+		BedrockMemoryProperties props = new BedrockMemoryProperties(MemoryMode.NONE, "mem", "strat", 10, 4);
 		DefaultInvocationService service = new DefaultInvocationService(conversationMemoryService,
 				longTermMemoryService, chatClient, connections, props);
 		setupChatClientChain("reply");

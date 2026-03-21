@@ -13,6 +13,7 @@ import org.springframework.stereotype.Component;
 
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.stream.Collectors;
 
@@ -76,7 +77,7 @@ public class RemoteAgentConnections {
 	public String getAgentDescriptions() {
 		return loadedCards().stream()
 			.map(card -> String.format("{\"name\": \"%s\", \"description\": \"%s\"}", card.name(),
-					card.description() != null ? card.description() : "No description"))
+					Objects.requireNonNullElse(card.description(), "No description")))
 			.collect(Collectors.joining("\n"));
 	}
 

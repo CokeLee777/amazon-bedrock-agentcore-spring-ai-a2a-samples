@@ -1,8 +1,8 @@
 package io.github.cokelee777.agent.host.memory.bedrock;
 
 import io.github.cokelee777.agent.host.memory.LongTermMemoryService;
-import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.util.Assert;
 import software.amazon.awssdk.services.bedrockagentcore.BedrockAgentCoreClient;
 import software.amazon.awssdk.services.bedrockagentcore.model.RetrieveMemoryRecordsRequest;
 import software.amazon.awssdk.services.bedrockagentcore.model.RetrieveMemoryRecordsResponse;
@@ -20,11 +20,6 @@ import java.util.List;
  * </p>
  *
  * <p>
- * If {@code strategyId} is blank or equals the placeholder value, the API is not called
- * and an empty list is returned.
- * </p>
- *
- * <p>
  * <strong>Note on namespace format:</strong> the
  * {@code /strategies/{strategyId}/actors/{actorId}} pattern is not formally documented in
  * the SDK Javadoc. Verify the actual namespace value from a {@code listMemoryRecords}
@@ -32,22 +27,31 @@ import java.util.List;
  * </p>
  */
 @Slf4j
-@RequiredArgsConstructor
 public class BedrockLongTermMemoryService implements LongTermMemoryService {
-
-	private static final String PLACEHOLDER_STRATEGY_ID = "placeholder-strategy-id";
 
 	private final BedrockAgentCoreClient client;
 
 	private final BedrockMemoryProperties properties;
 
+	/**
+	 * Creates the service, asserting that {@code memoryId} and {@code strategyId} are
+	 * provided.
+	 * @param client the Bedrock client
+	 * @param properties the memory properties
+	 */
+	public BedrockLongTermMemoryService(BedrockAgentCoreClient client, BedrockMemoryProperties properties) {
+		Assert.hasText(properties.memoryId(),
+				"aws.bedrock.agent-core.memory.memory-id must be set when mode is not 'none'");
+		Assert.hasText(properties.strategyId(),
+				"aws.bedrock.agent-core.memory.strategy-id must be set when mode includes long-term");
+
+		this.client = client;
+		this.properties = properties;
+	}
+
 	@Override
 	public List<String> retrieveRelevant(String actorId, String searchQuery) {
 		String strategyId = properties.strategyId();
-		if (strategyId.isBlank() || PLACEHOLDER_STRATEGY_ID.equals(strategyId)) {
-			log.debug("Long-term retrieval skipped: strategyId is blank or placeholder");
-			return Collections.emptyList();
-		}
 		try {
 			String namespace = "/strategies/" + strategyId + "/actors/" + actorId;
 			SearchCriteria criteria = SearchCriteria.builder()

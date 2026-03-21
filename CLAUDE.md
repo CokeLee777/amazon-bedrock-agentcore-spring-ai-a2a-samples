@@ -42,7 +42,12 @@ amazon-bedrock-agentcore-spring-ai-a2a-samples/
 │   ├── host-agent/   (port: 8080)           # AgentCore Runtime 진입점 · 오케스트레이터
 │   │   ├── InvocationsController            # POST /invocations, 요청마다 동적 시스템 프롬프트 생성
 │   │   ├── RemoteAgentConnections           # 다운스트림 에이전트 호출 Tool (@Tool), LazyAgentCard 맵 관리
-│   │   └── RemoteAgentProperties            # 다운스트림 에이전트 URL 설정
+│   │   ├── RemoteAgentProperties            # 다운스트림 에이전트 URL 설정
+│   │   ├── config/BedrockMemoryConfiguration  # mode != none 일 때 Bedrock 메모리 빈 등록
+│   │   ├── config/NoOpMemoryConfiguration   # mode == none 일 때 no-op 메모리 빈 등록
+│   │   ├── memory/bedrock/BedrockMemoryProperties  # @ConfigurationProperties(prefix=aws.bedrock.agent-core.memory)
+│   │   ├── memory/bedrock/BedrockConversationMemoryService  # 단기 기억 (listEvents / createEvent)
+│   │   └── memory/bedrock/BedrockLongTermMemoryService     # 장기 기억 (retrieveMemoryRecords)
 │   ├── order-agent/  (port: 9001)           # 주문 조회 · 취소 가능 여부 확인 A2A 에이전트
 │   │   ├── OrderTools                       # getOrderList, checkOrderCancellability
 │   │   ├── DeliveryAgentClient              # delivery-agent 호출 클라이언트 (LazyAgentCard)
@@ -108,6 +113,19 @@ amazon-bedrock-agentcore-spring-ai-a2a-samples/
 - `a2a.blocking.consumption.timeout.seconds` — 이벤트 소비/영속화(TaskStore 반영) 완료 대기 최대 시간(초). 기본 5.
 - autoconfigure의 `src/main/resources/application.yml`에 기본값이 있으며, 각 에이전트 모듈의 `application.yml`에서 재정의하면 **오버라이드**된다 (Spring Boot: 메인 앱 설정이 라이브러리보다 우선).
 - 커스텀 값을 쓰면 `SpringA2AConfigProvider`에서 INFO 로그로 `Using custom A2A config: key=value` 또는 `Using custom A2A optional config: key=value` 출력.
+
+### BedrockMemoryProperties (host-agent)
+
+- prefix: `aws.bedrock.agent-core.memory`. 환경변수 `BEDROCK_MEMORY_ID` 등으로 오버라이드.
+- `mode` — 필수(`@NotNull`). 기본값 `none`. 미설정 시 AWS 연결 시도하지 않는다.
+- `memoryId`, `strategyId` — `@Nullable`. properties 레벨에서는 선택. 실제 필요한 서비스 생성자에서 `Assert.hasText`로 검증.
+  - `BedrockConversationMemoryService` 생성자: `memoryId` 필수 검증.
+  - `BedrockLongTermMemoryService` 생성자: `memoryId` + `strategyId` 모두 필수 검증.
+- `shortTermMaxTurns`(`@Min(1)`, 기본 10), `longTermMaxResults`(`@Min(1)`, 기본 4) — 항상 유효한 값 보장.
+- `BedrockMemoryConfiguration` — `mode != none`일 때만 활성화. mode별 빈 분기:
+  - `short_term`: `BedrockConversationMemoryService` + `NoOpLongTermMemoryService`
+  - `long_term` / `both`: `BedrockConversationMemoryService` + `BedrockLongTermMemoryService`
+- `NoOpMemoryConfiguration` — `mode == none`일 때 활성화. `BedrockMemoryProperties`도 함께 등록하여 `DefaultInvocationService`가 mode를 읽을 수 있도록 한다.
 
 ### auto-configure 활성화 조건
 

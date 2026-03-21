@@ -9,7 +9,7 @@ import java.util.List;
  * No-operation implementation of {@link ConversationMemoryService}.
  *
  * <p>
- * Used when {@code aws.bedrock.agentcore.memory.mode=none}. All operations are no-ops so
+ * Used when {@code aws.bedrock.agent-core.memory.mode=none}. All operations are no-ops so
  * the application starts without AWS credentials.
  * </p>
  */

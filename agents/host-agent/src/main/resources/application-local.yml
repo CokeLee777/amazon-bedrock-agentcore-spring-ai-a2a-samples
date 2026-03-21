@@ -3,7 +3,6 @@ spring:
     activate:
       on-profile: local
 
-
 remote:
   agents:
     order-agent:
@@ -12,9 +11,3 @@ remote:
       url: http://localhost:9002
     payment-agent:
       url: http://localhost:9003
-
-aws:
-  bedrock:
-    agentcore:
-      memory:
-        mode: none

@@ -15,9 +15,9 @@ import software.amazon.awssdk.services.bedrockagentcore.model.RetrieveMemoryReco
 import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatIllegalArgumentException;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
@@ -27,19 +27,16 @@ class BedrockLongTermMemoryServiceTest {
 	private BedrockAgentCoreClient client;
 
 	@Test
-	void emptyStrategyId_returnsEmptyWithoutApiCall() {
-		BedrockMemoryProperties props = new BedrockMemoryProperties("mem-1", MemoryMode.BOTH, 10, "", 4);
-		BedrockLongTermMemoryService service = new BedrockLongTermMemoryService(client, props);
+	void emptyStrategyId_throwsOnConstruction() {
+		BedrockMemoryProperties props = new BedrockMemoryProperties(MemoryMode.BOTH, "mem-1", "", 10, 4);
 
-		List<String> result = service.retrieveRelevant("actor-1", "query");
-
-		assertThat(result).isEmpty();
-		verifyNoInteractions(client);
+		assertThatIllegalArgumentException().isThrownBy(() -> new BedrockLongTermMemoryService(client, props))
+			.withMessageContaining("strategy-id");
 	}
 
 	@Test
 	void retrieveRelevant_callsApiWithCorrectNamespaceAndCriteria() {
-		BedrockMemoryProperties props = new BedrockMemoryProperties("mem-1", MemoryMode.BOTH, 10, "strat-1", 4);
+		BedrockMemoryProperties props = new BedrockMemoryProperties(MemoryMode.BOTH, "mem-1", "strat-1", 10, 4);
 		BedrockLongTermMemoryService service = new BedrockLongTermMemoryService(client, props);
 
 		MemoryRecordSummary summary = MemoryRecordSummary.builder()
@@ -65,15 +62,11 @@ class BedrockLongTermMemoryServiceTest {
 	}
 
 	@Test
-	void placeholderStrategyId_returnsEmptyWithoutApiCall() {
-		BedrockMemoryProperties props = new BedrockMemoryProperties("mem-1", MemoryMode.BOTH, 10,
-				"placeholder-strategy-id", 4);
-		BedrockLongTermMemoryService service = new BedrockLongTermMemoryService(client, props);
+	void emptyMemoryId_throwsOnConstruction() {
+		BedrockMemoryProperties props = new BedrockMemoryProperties(MemoryMode.BOTH, "", "strat-1", 10, 4);
 
-		List<String> result = service.retrieveRelevant("actor-1", "query");
-
-		assertThat(result).isEmpty();
-		verifyNoInteractions(client);
+		assertThatIllegalArgumentException().isThrownBy(() -> new BedrockLongTermMemoryService(client, props))
+			.withMessageContaining("memory-id");
 	}
 
 }

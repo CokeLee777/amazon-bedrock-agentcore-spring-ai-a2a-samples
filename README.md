@@ -61,6 +61,9 @@ Agent       Agent     Agent
 | `A2A_CLIENT_TIMEOUT_SECONDS` | `15`                   | 다운스트림 에이전트 호출 타임아웃(초) |
 | `AGENT_URL` | agent별 기본값             | 각 에이전트의 공개 베이스 URL (AgentCard.url) |
 | `AGENT_PORT` | agent별 기본값             | 각 에이전트 리슨 포트 |
+| `BEDROCK_MEMORY_MODE` | `none`                 | 메모리 사용 모드 (`none` / `short_term` / `long_term` / `both`) |
+| `BEDROCK_MEMORY_ID` | —                      | Bedrock AgentCore Memory 리소스 ID (mode가 `none`이 아닐 때 필수) |
+| `BEDROCK_MEMORY_STRATEGY_ID` | —                      | Memory Strategy ID (mode가 `long_term` / `both`일 때 필수) |
 
 A2A 서버의 blocking 타임아웃은 `application.yml`에서 설정할 수 있으며, autoconfigure 기본값을 앱 설정으로 오버라이드할 수 있다.
 
@@ -68,6 +71,11 @@ A2A 서버의 blocking 타임아웃은 `application.yml`에서 설정할 수 있
 |---------------------------|--------|------|
 | `a2a.blocking.agent.timeout.seconds` | `30` | 에이전트 실행(LLM·툴 등) 완료 대기 최대 시간(초) |
 | `a2a.blocking.consumption.timeout.seconds` | `5` | 이벤트 소비/영속화 완료 대기 최대 시간(초) |
+| `aws.bedrock.agent-core.memory.mode` | `none` | 메모리 사용 모드 |
+| `aws.bedrock.agent-core.memory.memory-id` | — | Memory 리소스 ID |
+| `aws.bedrock.agent-core.memory.strategy-id` | — | Memory Strategy ID |
+| `aws.bedrock.agent-core.memory.short-term-max-turns` | `10` | 단기 기억 최대 대화 턴 수 |
+| `aws.bedrock.agent-core.memory.long-term-max-results` | `4` | 장기 기억 최대 검색 결과 수 |
 
 ## 실행 방법
 
