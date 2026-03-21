@@ -45,7 +45,7 @@ public final class TextExtractor {
 	 * text parts
 	 */
 	public static String extractTextFromTask(Task task) {
-		if (task.getArtifacts() == null) {
+		if (task == null || task.getArtifacts() == null) {
 			return "";
 		}
 

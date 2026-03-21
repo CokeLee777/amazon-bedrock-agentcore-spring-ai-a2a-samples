@@ -4,6 +4,7 @@ import io.a2a.A2A;
 import io.a2a.spec.AgentCard;
 import lombok.extern.slf4j.Slf4j;
 import org.jspecify.annotations.Nullable;
+import org.springframework.util.Assert;
 
 import java.net.URI;
 import java.util.Optional;
@@ -42,8 +43,10 @@ public class LazyAgentCard {
 	 * @param agentUrl the base URL of the downstream A2A agent
 	 */
 	public LazyAgentCard(String agentUrl) {
+		Assert.hasText(agentUrl, "agentUrl must not be blank");
+
 		this.agentUrl = agentUrl;
-		tryFetch();
+		tryFetchAgentCard();
 	}
 
 	/**
@@ -60,7 +63,7 @@ public class LazyAgentCard {
 	 */
 	public Optional<AgentCard> get() {
 		if (card == null) {
-			tryFetch();
+			tryFetchAgentCard();
 		}
 		return Optional.ofNullable(card);
 	}
@@ -80,11 +83,14 @@ public class LazyAgentCard {
 		return Optional.ofNullable(card);
 	}
 
-	private void tryFetch() {
+	private void tryFetchAgentCard() {
 		try {
 			String path = new URI(agentUrl).getPath();
-			card = A2A.getAgentCard(agentUrl, path + ".well-known/agent-card.json", null);
-			log.info("Resolved agent card '{}' from {}", card.name(), agentUrl);
+			AgentCard fetchedCard = A2A.getAgentCard(agentUrl, path + ".well-known/agent-card.json", null);
+
+			log.info("Resolved agent card '{}' from {}", fetchedCard.name(), agentUrl);
+
+			card = fetchedCard;
 		}
 		catch (Exception e) {
 			log.warn("Failed to resolve agent card from {}: {}", agentUrl, e.getMessage());
