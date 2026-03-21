@@ -24,18 +24,17 @@ class OrderToolsTest {
 	}
 
 	@Test
-	void getOrderList_returnsAllOrdersWithDeliveryStatus() {
-		when(deliveryAgentClient.send(anyString())).thenReturn("배송완료");
-
+	void getOrderList_returnsAllOrdersWithBasicInfo() {
 		String result = tools.getOrderList();
 
 		assertThat(result).contains("ORD-1001").contains("ORD-1002").contains("ORD-1003");
 		assertThat(result).contains("TRACK-1001").contains("TRACK-1002").contains("TRACK-1003");
-		assertThat(result).contains("배송완료");
+		assertThat(result).doesNotContain("배송완료");
 	}
 
 	@Test
-	void checkOrderCancellability_ord1001_returnsOrderAndPaymentStatus() {
+	void checkOrderCancellability_ord1001_returnsOrderDeliveryAndPaymentStatus() {
+		when(deliveryAgentClient.send(anyString())).thenReturn("TRACK-1001 배송 상태: 배송완료");
 		when(paymentAgentClient.send(anyString())).thenReturn("ORD-1001 결제 상태: 결제완료 — 1,500,000원 (카드결제, 2026-03-01)");
 
 		String result = tools.checkOrderCancellability("ORD-1001");
@@ -44,7 +43,8 @@ class OrderToolsTest {
 	}
 
 	@Test
-	void checkOrderCancellability_ord1002_returnsOrderAndPaymentStatus() {
+	void checkOrderCancellability_ord1002_returnsOrderDeliveryAndPaymentStatus() {
+		when(deliveryAgentClient.send(anyString())).thenReturn("TRACK-1002 배송 상태: 배송중");
 		when(paymentAgentClient.send(anyString())).thenReturn("ORD-1002 결제 상태: 결제완료 — 45,000원 (카드결제, 2026-03-10)");
 
 		String result = tools.checkOrderCancellability("ORD-1002");
