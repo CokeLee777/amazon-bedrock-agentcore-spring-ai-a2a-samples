@@ -92,11 +92,13 @@ public class BedrockChatMemoryRepository implements ChatMemoryRepository {
 }
 
 // BedrockChatMemoryRepositoryProperties
-@ConfigurationProperties(prefix = "aws.bedrock.agent-core.memory")
+@ConfigurationProperties(prefix = BedrockChatMemoryRepositoryProperties.CONFIG_PREFIX)
 public record BedrockChatMemoryRepositoryProperties(
     @Nullable String memoryId,                   // @ConditionalOnProperty로 게이팅, 생성자에서 Assert.hasText
     @DefaultValue("10") @Min(1) int maxTurns     // 기존 shortTermMaxTurns
-) {}
+) {
+    public static final String CONFIG_PREFIX = "spring.ai.chat.memory.repository.bedrock.agent-core";
+}
 ```
 
 ---
@@ -108,8 +110,9 @@ public record BedrockChatMemoryRepositoryProperties(
 
 ```java
 // BedrockChatMemoryAutoConfiguration
-@AutoConfiguration
-@ConditionalOnProperty(prefix = "aws.bedrock.agent-core.memory", name = "memory-id")
+@AutoConfiguration(before = ChatMemoryAutoConfiguration.class)
+@ConditionalOnClass(BedrockChatMemoryRepository.class)
+@ConditionalOnProperty(prefix = BedrockChatMemoryRepositoryProperties.CONFIG_PREFIX, name = "memory-id")
 @EnableConfigurationProperties(BedrockChatMemoryRepositoryProperties.class)
 public class BedrockChatMemoryAutoConfiguration {
 
@@ -128,6 +131,14 @@ public class BedrockChatMemoryAutoConfiguration {
             BedrockChatMemoryRepositoryProperties properties,
             AgentCoreEventToMessageConverter converter) { ... }
 }
+
+// @AutoConfiguration(before = ChatMemoryAutoConfiguration.class)
+//   → Bedrock 빈이 먼저 등록되어 ChatMemoryAutoConfiguration의
+//     @ConditionalOnMissingBean이 InMemory 등록을 건너뜀
+// @ConditionalOnClass(BedrockChatMemoryRepository.class)
+//   → 구현체 모듈이 classpath에 있을 때만 활성화
+// @ConditionalOnProperty(name = "memory-id")
+//   → memory-id 설정 시에만 Bedrock 빈 등록
 ```
 
 ---
