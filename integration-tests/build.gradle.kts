@@ -1,9 +1,9 @@
 dependencies {
     testImplementation(project(":agent-common"))
-    testImplementation(project(":agents:host-agent"))
-    testImplementation(project(":agents:order-agent"))
-    testImplementation(project(":agents:delivery-agent"))
-    testImplementation(project(":agents:payment-agent"))
+    testImplementation(project(":host-agent"))
+    testImplementation(project(":order-agent"))
+    testImplementation(project(":delivery-agent"))
+    testImplementation(project(":payment-agent"))
     testImplementation("org.springframework.boot:spring-boot-starter-web")
     testImplementation("org.springframework.boot:spring-boot-starter-test")
     testImplementation("org.springframework.ai:spring-ai-client-chat")

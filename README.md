@@ -38,10 +38,10 @@ Agent       Agent     Agent
 | `agent-common` | —    | `A2ATransport`, `LazyAgentCard`, `TextExtractor` 등 공유 유틸리티                  |
 | `spring-ai-a2a-server` | —    | A2A 서버 구현체 (AgentCard, Message 컨트롤러, Task 컨트롤러)                             |
 | `spring-ai-a2a-server-autoconfigure` | —    | A2A 서버/공통 인프라 자동 구성                                                        |
-| `agents:host-agent` | 8080 | AgentCore Runtime 진입점 · 오케스트레이터                                             |
-| `agents:order-agent` | 9001 | 주문 조회 · 취소 가능 여부 확인 A2A 에이전트 (delivery/payment 에이전트 호출 포함)                  |
-| `agents:delivery-agent` | 9002 | 배송 추적 A2A 에이전트                                                              |
-| `agents:payment-agent` | 9003 | 결제/환불 상태 확인 A2A 에이전트                                                        |
+| `host-agent` | 8080 | AgentCore Runtime 진입점 · 오케스트레이터                                             |
+| `order-agent` | 9001 | 주문 조회 · 취소 가능 여부 확인 A2A 에이전트 (delivery/payment 에이전트 호출 포함)                  |
+| `delivery-agent` | 9002 | 배송 추적 A2A 에이전트                                                              |
+| `payment-agent` | 9003 | 결제/환불 상태 확인 A2A 에이전트                                                        |
 
 ## 전제 조건
 
@@ -95,10 +95,10 @@ A2A 서버의 blocking 타임아웃은 `application.yml`에서 설정할 수 있
 ./gradlew build
 
 # 각 에이전트 실행 (별도 터미널, local 프로파일 활성화)
-SPRING_PROFILES_ACTIVE=local ./gradlew :agents:order-agent:bootRun
-SPRING_PROFILES_ACTIVE=local ./gradlew :agents:delivery-agent:bootRun
-SPRING_PROFILES_ACTIVE=local ./gradlew :agents:payment-agent:bootRun
-SPRING_PROFILES_ACTIVE=local ./gradlew :agents:host-agent:bootRun
+SPRING_PROFILES_ACTIVE=local ./gradlew :order-agent:bootRun
+SPRING_PROFILES_ACTIVE=local ./gradlew :delivery-agent:bootRun
+SPRING_PROFILES_ACTIVE=local ./gradlew :payment-agent:bootRun
+SPRING_PROFILES_ACTIVE=local ./gradlew :host-agent:bootRun
 ```
 
 > **IntelliJ 사용자**: Spring Boot 실행 설정의 **Active Profiles** 항목에 `local`을 입력하면 동일하게 적용됩니다.
