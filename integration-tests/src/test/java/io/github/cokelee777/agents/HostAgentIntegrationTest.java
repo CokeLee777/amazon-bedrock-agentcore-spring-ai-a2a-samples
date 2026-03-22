@@ -73,8 +73,8 @@ class HostAgentIntegrationTest {
 
 		assertThat(response).containsEntry("content", MOCK_RESPONSE);
 		assertThat(response).containsKeys("sessionId", "actorId");
-		assertThat(response.get("sessionId")).isBlank();
-		assertThat(response.get("actorId")).isBlank();
+		assertThat(response.get("sessionId")).isNotBlank();
+		assertThat(response.get("actorId")).isNotBlank();
 	}
 
 	/**

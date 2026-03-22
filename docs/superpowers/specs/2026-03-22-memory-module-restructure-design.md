@@ -112,22 +112,20 @@ public record BedrockChatMemoryRepositoryProperties(
 // BedrockChatMemoryAutoConfiguration
 @AutoConfiguration(before = ChatMemoryAutoConfiguration.class)
 @ConditionalOnClass(BedrockChatMemoryRepository.class)
+@ConditionalOnProperty(prefix = BedrockChatMemoryRepositoryProperties.CONFIG_PREFIX, name = "memory-id")
 @EnableConfigurationProperties(BedrockChatMemoryRepositoryProperties.class)
 public class BedrockChatMemoryAutoConfiguration {
 
     // BedrockAgentCoreClient: ${spring.ai.bedrock.aws.region} @Value로 region 읽어서 생성
     //   (기존 BedrockMemoryConfiguration과 동일 패턴)
     @Bean
-    @ConditionalOnProperty(prefix = BedrockChatMemoryRepositoryProperties.CONFIG_PREFIX, name = "memory-id")
     public BedrockAgentCoreClient bedrockAgentCoreClient(
             @Value("${spring.ai.bedrock.aws.region}") String region) { ... }
 
     @Bean
-    @ConditionalOnProperty(prefix = BedrockChatMemoryRepositoryProperties.CONFIG_PREFIX, name = "memory-id")
     public AgentCoreEventToMessageConverter agentCoreEventToMessageConverter() { ... }
 
     @Bean
-    @ConditionalOnProperty(prefix = BedrockChatMemoryRepositoryProperties.CONFIG_PREFIX, name = "memory-id")
     public BedrockChatMemoryRepository chatMemoryRepository(
             BedrockAgentCoreClient client,
             BedrockChatMemoryRepositoryProperties properties,
@@ -139,12 +137,11 @@ public class BedrockChatMemoryAutoConfiguration {
 //   → Bedrock 빈이 먼저 등록되어 ChatMemoryAutoConfiguration의
 //     @ConditionalOnMissingBean이 InMemory 등록을 건너뜀
 // @ConditionalOnClass(BedrockChatMemoryRepository.class)
-//   → 구현체 모듈이 classpath에 있을 때만 클래스 활성화.
+//   → 구현체 모듈이 classpath에 있을 때만 활성화.
 //     나중에 다른 전략 모듈 추가 시 각자의 구현체 클래스로 조건 분리 가능
-// @Bean @ConditionalOnProperty(name = "memory-id")
-//   → memory-id 설정 시에만 Bedrock 빈 등록.
-//     미설정 시 클래스는 활성화되지만 빈이 등록되지 않으므로
-//     ChatMemoryAutoConfiguration의 @ConditionalOnMissingBean이 InMemory를 자동 등록
+// @ConditionalOnProperty(name = "memory-id")
+//   → memory-id 미설정 시 클래스 자체가 비활성화 → InMemory 폴백
+//     memory-id 설정 시 Bedrock 빈 등록
 ```
 
 ---

@@ -1,16 +1,15 @@
 package io.github.cokelee777.agent.host.invocation;
 
 import io.github.cokelee777.agent.host.RemoteAgentConnections;
-import io.github.cokelee777.agent.host.memory.ShortTermMemoryService;
-import io.github.cokelee777.agent.host.memory.ConversationSession;
-import io.github.cokelee777.agent.host.memory.LongTermMemoryService;
-import io.github.cokelee777.agent.host.memory.MemoryMode;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.ArgumentCaptor;
 import org.mockito.InOrder;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.ai.chat.client.ChatClient;
+import org.springframework.ai.chat.memory.ChatMemoryRepository;
+import org.springframework.ai.chat.messages.AssistantMessage;
 import org.springframework.ai.chat.messages.UserMessage;
 
 import java.util.List;
@@ -24,17 +23,13 @@ import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.inOrder;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
 class DefaultInvocationServiceTest {
 
 	@Mock
-	private ShortTermMemoryService shortTermMemoryService;
-
-	@Mock
-	private LongTermMemoryService longTermMemoryService;
+	private ChatMemoryRepository chatMemoryRepository;
 
 	@Mock
 	private ChatClient chatClient;
@@ -49,55 +44,75 @@ class DefaultInvocationServiceTest {
 	private RemoteAgentConnections connections;
 
 	@Test
-	void modeNone_nullSessionInResponse() {
-		DefaultInvocationService service = serviceWith(MemoryMode.NONE);
-		setupChatClientChain("reply");
-		when(connections.getAgentDescriptions()).thenReturn("");
-
-		InvocationResponse response = service.invoke(new InvocationRequest("hello", null, null));
-
-		assertThat(response.content()).isEqualTo("reply");
-		assertThat(response.sessionId()).isNull();
-		assertThat(response.actorId()).isNull();
-	}
-
-	@Test
-	void modeShortTerm_loadsHistoryAndSavesTurnsAfterChatClient() {
-		DefaultInvocationService service = serviceWith(MemoryMode.SHORT_TERM);
-		when(shortTermMemoryService.loadHistory(any(ConversationSession.class)))
-			.thenReturn(List.of(new UserMessage("prev")));
+	void invoke_loadsHistoryAndSavesNewMessagesAfterLlmCall() {
+		when(chatMemoryRepository.findByConversationId(anyString())).thenReturn(List.of(new UserMessage("prev")));
 		setupChatClientChain("ok");
 		when(connections.getAgentDescriptions()).thenReturn("");
 
-		service.invoke(new InvocationRequest("hi", "actor-1", "session-1"));
+		service().invoke(new InvocationRequest("hi", "actor-1", "session-1"));
 
-		InOrder order = inOrder(chatClient, shortTermMemoryService);
+		InOrder order = inOrder(chatClient, chatMemoryRepository);
 		order.verify(chatClient).prompt();
-		order.verify(shortTermMemoryService).appendUserTurn(any(ConversationSession.class), eq("hi"));
-		order.verify(shortTermMemoryService).appendAssistantTurn(any(ConversationSession.class), eq("ok"));
-		verifyNoInteractions(longTermMemoryService);
+		ArgumentCaptor<List> captor = ArgumentCaptor.forClass(List.class);
+		order.verify(chatMemoryRepository).saveAll(eq("actor-1:session-1"), captor.capture());
+		List<?> saved = captor.getValue();
+		assertThat(saved).hasSize(2);
+		assertThat(saved.get(0)).isInstanceOf(UserMessage.class);
+		assertThat(saved.get(1)).isInstanceOf(AssistantMessage.class);
 	}
 
 	@Test
-	void modeLongTerm_retrievesRelevantAndDoesNotPersistShortTermTurns() {
-		DefaultInvocationService service = serviceWith(MemoryMode.LONG_TERM);
-		when(longTermMemoryService.retrieveRelevant(anyString(), anyString())).thenReturn(List.of("past info"));
-		setupChatClientChain("response");
+	void invoke_savesOnlyTwoNewMessages() {
+		when(chatMemoryRepository.findByConversationId(anyString())).thenReturn(List.of());
+		setupChatClientChain("reply");
 		when(connections.getAgentDescriptions()).thenReturn("");
 
-		service.invoke(new InvocationRequest("query", "actor-1", "session-1"));
+		service().invoke(new InvocationRequest("hello", "a", "s"));
 
-		verify(longTermMemoryService).retrieveRelevant("actor-1", "query");
-		verify(shortTermMemoryService, never()).loadHistory(any(ConversationSession.class));
-		verify(shortTermMemoryService, never()).appendUserTurn(any(ConversationSession.class), anyString());
-		verify(shortTermMemoryService, never()).appendAssistantTurn(any(ConversationSession.class), anyString());
+		ArgumentCaptor<List> captor = ArgumentCaptor.forClass(List.class);
+		verify(chatMemoryRepository).saveAll(anyString(), captor.capture());
+		assertThat(captor.getValue()).hasSize(2);
 	}
 
 	@Test
-	void chatClientFailure_noMemorySaved() {
-		DefaultInvocationService service = serviceWith(MemoryMode.BOTH);
-		when(shortTermMemoryService.loadHistory(any(ConversationSession.class))).thenReturn(List.of());
-		when(longTermMemoryService.retrieveRelevant(anyString(), anyString())).thenReturn(List.of());
+	void invoke_nullActorId_generatesUuid() {
+		when(chatMemoryRepository.findByConversationId(anyString())).thenReturn(List.of());
+		setupChatClientChain("hi");
+		when(connections.getAgentDescriptions()).thenReturn("");
+
+		InvocationResponse response = service().invoke(new InvocationRequest("hello", null, null));
+
+		assertThat(response.actorId()).isNotBlank();
+		assertThat(response.sessionId()).isNotBlank();
+	}
+
+	@Test
+	void invoke_providedIds_returnsSameIds() {
+		when(chatMemoryRepository.findByConversationId(anyString())).thenReturn(List.of());
+		setupChatClientChain("reply");
+		when(connections.getAgentDescriptions()).thenReturn("");
+
+		InvocationResponse response = service().invoke(new InvocationRequest("hi", "actor-1", "sess-42"));
+
+		assertThat(response.actorId()).isEqualTo("actor-1");
+		assertThat(response.sessionId()).isEqualTo("sess-42");
+	}
+
+	@Test
+	void invoke_alwaysReturnsNonNullIds() {
+		when(chatMemoryRepository.findByConversationId(anyString())).thenReturn(List.of());
+		setupChatClientChain("hi");
+		when(connections.getAgentDescriptions()).thenReturn("");
+
+		InvocationResponse response = service().invoke(new InvocationRequest("hello", null, null));
+
+		assertThat(response.sessionId()).isNotNull();
+		assertThat(response.actorId()).isNotNull();
+	}
+
+	@Test
+	void invoke_llmFailure_noMemorySaved() {
+		when(chatMemoryRepository.findByConversationId(anyString())).thenReturn(List.of());
 		when(connections.getAgentDescriptions()).thenReturn("");
 		when(chatClient.prompt()).thenReturn(requestSpec);
 		when(requestSpec.system(anyString())).thenReturn(requestSpec);
@@ -105,42 +120,14 @@ class DefaultInvocationServiceTest {
 		when(requestSpec.user(anyString())).thenReturn(requestSpec);
 		when(requestSpec.call()).thenThrow(new RuntimeException("LLM error"));
 
-		assertThatThrownBy(() -> service.invoke(new InvocationRequest("hi", "actor-1", "session-1")))
+		assertThatThrownBy(() -> service().invoke(new InvocationRequest("hi", "actor-1", "session-1")))
 			.isInstanceOf(RuntimeException.class);
 
-		verify(shortTermMemoryService, never()).appendUserTurn(any(ConversationSession.class), anyString());
-		verify(shortTermMemoryService, never()).appendAssistantTurn(any(ConversationSession.class), anyString());
+		verify(chatMemoryRepository, never()).saveAll(anyString(), any());
 	}
 
-	@Test
-	void noSessionId_generatesNewSessionIdInResponse() {
-		DefaultInvocationService service = serviceWith(MemoryMode.SHORT_TERM);
-		when(shortTermMemoryService.loadHistory(any(ConversationSession.class))).thenReturn(List.of());
-		setupChatClientChain("hi");
-		when(connections.getAgentDescriptions()).thenReturn("");
-
-		InvocationResponse response = service.invoke(new InvocationRequest("hello", null, null));
-
-		assertThat(response.sessionId()).isNotBlank();
-		assertThat(response.actorId()).isNotBlank();
-	}
-
-	@Test
-	void providedSessionId_returnsSameSessionIdInResponse() {
-		DefaultInvocationService service = serviceWith(MemoryMode.SHORT_TERM);
-		when(shortTermMemoryService.loadHistory(any(ConversationSession.class))).thenReturn(List.of());
-		setupChatClientChain("reply");
-		when(connections.getAgentDescriptions()).thenReturn("");
-
-		InvocationResponse response = service.invoke(new InvocationRequest("hi", "actor-1", "sess-42"));
-
-		assertThat(response.sessionId()).isEqualTo("sess-42");
-		assertThat(response.actorId()).isEqualTo("actor-1");
-	}
-
-	private DefaultInvocationService serviceWith(MemoryMode mode) {
-		return new DefaultInvocationService(chatClient, connections, mode, shortTermMemoryService,
-				longTermMemoryService);
+	private DefaultInvocationService service() {
+		return new DefaultInvocationService(chatClient, connections, chatMemoryRepository);
 	}
 
 	private void setupChatClientChain(String content) {

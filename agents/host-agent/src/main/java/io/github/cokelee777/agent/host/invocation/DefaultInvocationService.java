@@ -1,19 +1,19 @@
 package io.github.cokelee777.agent.host.invocation;
 
 import io.github.cokelee777.agent.host.RemoteAgentConnections;
-import io.github.cokelee777.agent.host.memory.ShortTermMemoryService;
-import io.github.cokelee777.agent.host.memory.ConversationSession;
-import io.github.cokelee777.agent.host.memory.LongTermMemoryService;
-import io.github.cokelee777.agent.host.memory.MemoryMode;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.jspecify.annotations.Nullable;
 import org.springframework.ai.chat.client.ChatClient;
+import org.springframework.ai.chat.memory.ChatMemoryRepository;
+import org.springframework.ai.chat.messages.AssistantMessage;
 import org.springframework.ai.chat.messages.Message;
+import org.springframework.ai.chat.messages.UserMessage;
 import org.springframework.stereotype.Service;
 
-import java.util.Collections;
 import java.util.List;
 import java.util.Objects;
+import java.util.UUID;
 
 /**
  * Default implementation of {@link InvocationService}.
@@ -21,18 +21,19 @@ import java.util.Objects;
  * <p>
  * Execution order per request:
  * <ol>
- * <li>Resolve {@code actorId}/{@code sessionId} (generate if absent).</li>
- * <li>Load memory context according to the configured {@link MemoryMode}.</li>
- * <li>Assemble system prompt and call the LLM via {@link ChatClient}.</li>
- * <li>Persist USER and ASSISTANT turns <em>after</em> the LLM call succeeds, ensuring a
- * failed call leaves no orphaned events and allows clean retry.</li>
+ * <li>Resolve {@code actorId}/{@code sessionId} (generate UUID if absent).</li>
+ * <li>Compose {@code conversationId} as {@code "actorId:sessionId"}.</li>
+ * <li>Load history from {@link ChatMemoryRepository}.</li>
+ * <li>Call the LLM via {@link ChatClient}.</li>
+ * <li>Persist the new USER and ASSISTANT messages <em>after</em> the LLM call succeeds,
+ * ensuring a failed call leaves no orphaned events.</li>
  * </ol>
  * </p>
  *
  * <p>
- * <strong>Timestamp trade-off:</strong> {@code appendUserTurn} is called after the LLM
- * returns, so the stored {@code eventTimestamp} reflects "time of persistence" rather
- * than "time of utterance". Relative ordering (USER → ASSISTANT) is always preserved.
+ * <strong>saveAll semantics:</strong> only the two new messages are passed to
+ * {@link ChatMemoryRepository#saveAll}, consistent with append-based repositories such as
+ * {@code JdbcChatMemoryRepository}.
  * </p>
  */
 @Slf4j
@@ -67,57 +68,33 @@ public class DefaultInvocationService implements InvocationService {
 
 	private final RemoteAgentConnections connections;
 
-	private final MemoryMode memoryMode;
-
-	private final ShortTermMemoryService shortTermMemoryService;
-
-	private final LongTermMemoryService longTermMemoryService;
+	private final ChatMemoryRepository chatMemoryRepository;
 
 	@Override
 	public InvocationResponse invoke(InvocationRequest request) {
+		String actorId = resolveId(request.actorId());
+		String sessionId = resolveId(request.sessionId());
+		String conversationId = actorId + ":" + sessionId;
 		String prompt = request.prompt();
-		ConversationSession session = ConversationSession.builder()
-			.actorId(request.actorId())
-			.sessionId(request.sessionId())
-			.build();
 
-		List<Message> history = memoryMode.supportsShortTerm() ? shortTermMemoryService.loadHistory(session)
-				: Collections.emptyList();
-		List<String> relevantMemories = memoryMode.supportsLongTerm()
-				? longTermMemoryService.retrieveRelevant(session.actorId(), prompt) : Collections.emptyList();
+		List<Message> history = chatMemoryRepository.findByConversationId(conversationId);
+
 		String response = chatClient.prompt()
-			.system(buildSystemPrompt(relevantMemories))
+			.system(ROUTING_SYSTEM_PROMPT.formatted(connections.getAgentDescriptions()))
 			.messages(history)
 			.user(prompt)
 			.call()
 			.content();
 		String content = Objects.requireNonNullElse(response, "");
 
-		persistTurns(session, prompt, content);
+		chatMemoryRepository.saveAll(conversationId, List.of(new UserMessage(prompt), new AssistantMessage(content)));
 
-		log.info("session={} prompt={} response={}", session, prompt, content);
-		return toResponse(content, session);
+		log.info("session={} prompt={} response={}", conversationId, prompt, content);
+		return new InvocationResponse(content, sessionId, actorId);
 	}
 
-	private String buildSystemPrompt(List<String> relevantMemories) {
-		String base = ROUTING_SYSTEM_PROMPT.formatted(connections.getAgentDescriptions());
-		if (relevantMemories.isEmpty()) {
-			return base;
-		}
-		return base + "\n\n**관련 기억:**\n- " + String.join("\n- ", relevantMemories);
-	}
-
-	private void persistTurns(ConversationSession session, String prompt, String content) {
-		if (!memoryMode.supportsShortTerm()) {
-			return;
-		}
-		shortTermMemoryService.appendUserTurn(session, prompt);
-		shortTermMemoryService.appendAssistantTurn(session, content);
-	}
-
-	private InvocationResponse toResponse(String content, ConversationSession session) {
-		return memoryMode.isDisabled() ? new InvocationResponse(content, null, null)
-				: new InvocationResponse(content, session.sessionId(), session.actorId());
+	private String resolveId(@Nullable String id) {
+		return Objects.requireNonNullElse(id, UUID.randomUUID().toString());
 	}
 
 }

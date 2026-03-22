@@ -38,16 +38,20 @@ amazon-bedrock-agentcore-spring-ai-a2a-samples/
 │   │   ├── DefaultValuesConfigProvider      # A2A SDK 기본값 (a2a.blocking.* 등)
 │   │   └── SpringA2AConfigProvider          # Environment + 기본값 폴백 (커스텀 시 DEBUG 로그)
 │   └── A2ACommonAutoConfiguration           # AgentCard 빈 있을 때만 활성화
+├── memory/repository/
+│   └── spring-ai-a2a-model-chat-memory-repository-bedrock-agent-core/
+│       ├── BedrockChatMemoryRepository      # ChatMemoryRepository 구현체 (append, conversationId="actorId:sessionId")
+│       └── AgentCoreEventToMessageConverter # AgentCore Event → Spring AI Message 변환
+├── auto-configurations/models/chat/memory/repository/
+│   └── spring-ai-a2a-autoconfigure-model-chat-memory-repository-bedrock-agent-core/
+│       ├── BedrockChatMemoryAutoConfiguration   # @AutoConfiguration(before=ChatMemoryAutoConfiguration)
+│       └── BedrockChatMemoryRepositoryProperties  # @ConfigurationProperties(prefix=spring.ai.chat.memory.repository.bedrock.agent-core)
 ├── agents/
 │   ├── host-agent/   (port: 8080)           # AgentCore Runtime 진입점 · 오케스트레이터
 │   │   ├── InvocationsController            # POST /invocations, 요청마다 동적 시스템 프롬프트 생성
 │   │   ├── RemoteAgentConnections           # 다운스트림 에이전트 호출 Tool (@Tool), LazyAgentCard 맵 관리
 │   │   ├── RemoteAgentProperties            # 다운스트림 에이전트 URL 설정
-│   │   ├── config/BedrockMemoryConfiguration  # mode != none 일 때 Bedrock 메모리 빈 등록
-│   │   ├── config/NoOpMemoryConfiguration   # mode == none 일 때 no-op 메모리 빈 등록
-│   │   ├── memory/bedrock/BedrockMemoryProperties  # @ConfigurationProperties(prefix=aws.bedrock.agent-core.memory)
-│   │   ├── memory/bedrock/BedrockConversationMemoryService  # 단기 기억 (listEvents / createEvent)
-│   │   └── memory/bedrock/BedrockLongTermMemoryService     # 장기 기억 (retrieveMemoryRecords)
+│   │   └── DefaultInvocationService         # ChatMemoryRepository 주입, actorId:sessionId 복합키 사용
 │   ├── order-agent/  (port: 9001)           # 주문 조회 · 취소 가능 여부 확인 A2A 에이전트
 │   │   ├── OrderTools                       # getOrderList, checkOrderCancellability
 │   │   ├── DeliveryAgentClient              # delivery-agent 호출 클라이언트 (LazyAgentCard)
@@ -114,18 +118,26 @@ amazon-bedrock-agentcore-spring-ai-a2a-samples/
 - autoconfigure의 `src/main/resources/application.yml`에 기본값이 있으며, 각 에이전트 모듈의 `application.yml`에서 재정의하면 **오버라이드**된다 (Spring Boot: 메인 앱 설정이 라이브러리보다 우선).
 - 커스텀 값을 쓰면 `SpringA2AConfigProvider`에서 INFO 로그로 `Using custom A2A config: key=value` 또는 `Using custom A2A optional config: key=value` 출력.
 
-### BedrockMemoryProperties (host-agent)
+### BedrockChatMemoryRepositoryProperties (autoconfigure 모듈)
 
-- prefix: `aws.bedrock.agent-core.memory`. 환경변수 `BEDROCK_MEMORY_ID` 등으로 오버라이드.
-- `mode` — 필수(`@NotNull`). 기본값 `none`. 미설정 시 AWS 연결 시도하지 않는다.
-- `memoryId`, `strategyId` — `@Nullable`. properties 레벨에서는 선택. 실제 필요한 서비스 생성자에서 `Assert.hasText`로 검증.
-  - `BedrockConversationMemoryService` 생성자: `memoryId` 필수 검증.
-  - `BedrockLongTermMemoryService` 생성자: `memoryId` + `strategyId` 모두 필수 검증.
-- `shortTermMaxTurns`(`@Min(1)`, 기본 10), `longTermMaxResults`(`@Min(1)`, 기본 4) — 항상 유효한 값 보장.
-- `BedrockMemoryConfiguration` — `mode != none`일 때만 활성화. mode별 빈 분기:
-  - `short_term`: `BedrockConversationMemoryService` + `NoOpLongTermMemoryService`
-  - `long_term` / `both`: `BedrockConversationMemoryService` + `BedrockLongTermMemoryService`
-- `NoOpMemoryConfiguration` — `mode == none`일 때 활성화. `BedrockMemoryProperties`도 함께 등록하여 `DefaultInvocationService`가 mode를 읽을 수 있도록 한다.
+- prefix: `spring.ai.chat.memory.repository.bedrock.agent-core`. 환경변수 `BEDROCK_MEMORY_ID` 등으로 오버라이드.
+- `memoryId` — `@Nullable`. `memory-id` 미설정 시 autoconfigure 전체가 비활성화되어 Spring AI의 `InMemoryChatMemoryRepository`가 폴백으로 등록된다.
+- `maxTurns` — `@Min(1)`, 기본 10. `listEvents`에서 `maxResults = maxTurns * 2`로 사용.
+
+### BedrockChatMemoryAutoConfiguration
+
+- `@AutoConfiguration(before = ChatMemoryAutoConfiguration.class)` — Spring AI InMemory 폴백보다 먼저 등록된다.
+- `@ConditionalOnClass(BedrockChatMemoryRepository.class)` — 클래스패스에 구현체 모듈이 있을 때만 활성화.
+- `@ConditionalOnProperty(prefix=CONFIG_PREFIX, name="memory-id")` — `memory-id` 미설정 시 비활성화 → InMemory 폴백.
+- `bedrockAgentCoreClient` 빈에 `@ConditionalOnMissingBean` 적용 → 테스트에서 mock 주입 가능.
+
+### BedrockChatMemoryRepository (impl 모듈)
+
+- `ChatMemoryRepository` 구현체. `conversationId = "actorId:sessionId"` 복합키 파싱.
+- `findByConversationId` — `listEvents(maxResults = maxTurns * 2)` → `AgentCoreEventToMessageConverter` 변환, 오름차순 정렬.
+- `saveAll` — `createEvent` 호출 (append-only, `JdbcChatMemoryRepository`와 동일한 semantics). `DefaultInvocationService`는 새 2개 메시지만 전달.
+- `deleteByConversationId` — no-op (Bedrock AgentCore API 미지원).
+- `findConversationIds` — 빈 리스트 반환 (Bedrock API 미지원).
 
 ### auto-configure 활성화 조건
 
@@ -153,7 +165,7 @@ docker buildx build --platform linux/amd64 \
 
 ## 의존성 버전 (루트 build.gradle.kts extra)
 
-- `springAiVersion` — 1.1.2
+- `springAiVersion` — 1.1.3
 - `awsSdkVersion` — 2.42.9
 - `a2aVersion` — 0.3.3.Final
 - `gsonVersion` — 2.13.2

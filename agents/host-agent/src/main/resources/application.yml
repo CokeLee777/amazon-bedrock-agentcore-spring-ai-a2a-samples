@@ -10,6 +10,13 @@ spring:
         chat:
           options:
             model: ${BEDROCK_MODEL_ID:}
+    chat:
+      memory:
+        repository:
+          bedrock:
+            agent-core:
+              memory-id: ${BEDROCK_MEMORY_ID:}
+              max-turns: 10
 
 remote:
   agents:
@@ -19,13 +26,3 @@ remote:
       url: ${DELIVERY_AGENT_URL:}
     payment-agent:
       url: ${PAYMENT_AGENT_URL:}
-
-aws:
-  bedrock:
-    agent-core:
-      memory:
-        mode: ${BEDROCK_MEMORY_MODE:none}
-        memory-id: ${BEDROCK_MEMORY_ID:}
-        strategy-id: ${BEDROCK_MEMORY_STRATEGY_ID:}
-        short-term-max-turns: 10
-        long-term-max-results: 4
