@@ -43,7 +43,7 @@ public class LazyAgentCard {
 	 * @param agentUrl the base URL of the downstream A2A agent
 	 */
 	public LazyAgentCard(String agentUrl) {
-		Assert.hasText(agentUrl, "agentUrl must not be blank");
+		Assert.notNull(agentUrl, "agentUrl must not be null");
 
 		this.agentUrl = agentUrl;
 		tryFetchAgentCard();

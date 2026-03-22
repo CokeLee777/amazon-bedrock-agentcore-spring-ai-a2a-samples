@@ -28,7 +28,7 @@ public class SpringA2AConfigProvider implements A2AConfigProvider {
 
 	@Override
 	public String getValue(String name) {
-		Assert.hasText(name, "name must not be null");
+		Assert.notNull(name, "name must not be null");
 		if (env.containsProperty(name)) {
 			String value = env.getRequiredProperty(name);
 			log.info("Using custom A2A config: {}={}", name, value);
@@ -40,7 +40,7 @@ public class SpringA2AConfigProvider implements A2AConfigProvider {
 
 	@Override
 	public Optional<String> getOptionalValue(String name) {
-		Assert.hasText(name, "name must not be null");
+		Assert.notNull(name, "name must not be null");
 		if (env.containsProperty(name)) {
 			String value = env.getRequiredProperty(name);
 			log.info("Using custom A2A optional config: {}={}", name, value);

@@ -38,7 +38,7 @@ public class PaymentAgentClient {
 	 * @return the payment agent's response, or an error message if unavailable
 	 */
 	public String send(String task) {
-		Assert.hasText(task, "task must not be blank");
+		Assert.notNull(task, "task must not be null");
 
 		return lazyCard.get().map(card -> {
 			Message message = A2A.toUserMessage(task);

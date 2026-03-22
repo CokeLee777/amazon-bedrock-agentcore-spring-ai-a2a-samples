@@ -12,6 +12,8 @@ import org.springframework.ai.chat.memory.ChatMemoryRepository;
 import org.springframework.ai.chat.messages.AssistantMessage;
 import org.springframework.ai.chat.messages.UserMessage;
 
+import org.springframework.ai.chat.messages.Message;
+
 import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -53,9 +55,10 @@ class DefaultInvocationServiceTest {
 
 		InOrder order = inOrder(chatClient, chatMemoryRepository);
 		order.verify(chatClient).prompt();
-		ArgumentCaptor<List> captor = ArgumentCaptor.forClass(List.class);
+		@SuppressWarnings("unchecked")
+		ArgumentCaptor<List<Message>> captor = ArgumentCaptor.forClass(List.class);
 		order.verify(chatMemoryRepository).saveAll(eq("actor-1:session-1"), captor.capture());
-		List<?> saved = captor.getValue();
+		List<Message> saved = captor.getValue();
 		assertThat(saved).hasSize(2);
 		assertThat(saved.get(0)).isInstanceOf(UserMessage.class);
 		assertThat(saved.get(1)).isInstanceOf(AssistantMessage.class);
@@ -69,7 +72,8 @@ class DefaultInvocationServiceTest {
 
 		service().invoke(new InvocationRequest("hello", "a", "s"));
 
-		ArgumentCaptor<List> captor = ArgumentCaptor.forClass(List.class);
+		@SuppressWarnings("unchecked")
+		ArgumentCaptor<List<Message>> captor = ArgumentCaptor.forClass(List.class);
 		verify(chatMemoryRepository).saveAll(anyString(), captor.capture());
 		assertThat(captor.getValue()).hasSize(2);
 	}

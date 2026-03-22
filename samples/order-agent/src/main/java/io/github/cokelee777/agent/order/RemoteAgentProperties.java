@@ -30,7 +30,7 @@ public record RemoteAgentProperties(Map<String, Agent> agents) {
 	public record Agent(String url) {
 
 		public Agent {
-			Assert.hasText(url, "url must not be blank");
+			Assert.notNull(url, "url must not be null");
 		}
 	}
 }
