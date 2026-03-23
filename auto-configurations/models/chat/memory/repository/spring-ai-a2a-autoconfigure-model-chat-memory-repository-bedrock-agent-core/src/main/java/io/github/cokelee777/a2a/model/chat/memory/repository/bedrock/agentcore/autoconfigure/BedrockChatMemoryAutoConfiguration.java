@@ -1,6 +1,6 @@
 package io.github.cokelee777.a2a.model.chat.memory.repository.bedrock.agentcore.autoconfigure;
 
-import io.github.cokelee777.a2a.model.chat.memory.repository.bedrock.agentcore.AgentCoreEventToMessageConverter;
+import io.github.cokelee777.a2a.model.chat.memory.repository.bedrock.agentcore.BedrockAgentCoreEventToMessageConverter;
 import io.github.cokelee777.a2a.model.chat.memory.repository.bedrock.agentcore.BedrockChatMemoryRepository;
 import io.github.cokelee777.a2a.model.chat.memory.repository.bedrock.agentcore.BedrockChatMemoryRepositoryConfig;
 import org.springframework.beans.factory.annotation.Value;
@@ -51,8 +51,8 @@ public class BedrockChatMemoryAutoConfiguration {
 	 * @return the converter
 	 */
 	@Bean
-	public AgentCoreEventToMessageConverter agentCoreEventToMessageConverter() {
-		return new AgentCoreEventToMessageConverter();
+	public BedrockAgentCoreEventToMessageConverter agentCoreEventToMessageConverter() {
+		return new BedrockAgentCoreEventToMessageConverter();
 	}
 
 	/**
@@ -78,7 +78,7 @@ public class BedrockChatMemoryAutoConfiguration {
 	 */
 	@Bean
 	public BedrockChatMemoryRepository chatMemoryRepository(BedrockAgentCoreClient client,
-			BedrockChatMemoryRepositoryConfig config, AgentCoreEventToMessageConverter converter) {
+			BedrockChatMemoryRepositoryConfig config, BedrockAgentCoreEventToMessageConverter converter) {
 		return new BedrockChatMemoryRepository(client, config, converter);
 	}
 

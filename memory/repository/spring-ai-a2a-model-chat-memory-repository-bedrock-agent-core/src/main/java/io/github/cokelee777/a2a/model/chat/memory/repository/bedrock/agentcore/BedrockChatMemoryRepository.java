@@ -2,7 +2,6 @@ package io.github.cokelee777.a2a.model.chat.memory.repository.bedrock.agentcore;
 
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.ai.chat.memory.ChatMemoryRepository;
-import org.springframework.ai.chat.messages.AssistantMessage;
 import org.springframework.ai.chat.messages.Message;
 import org.springframework.ai.chat.messages.UserMessage;
 import org.springframework.util.Assert;
@@ -48,7 +47,7 @@ public class BedrockChatMemoryRepository implements ChatMemoryRepository {
 
 	private final BedrockChatMemoryRepositoryConfig config;
 
-	private final AgentCoreEventToMessageConverter converter;
+	private final BedrockAgentCoreEventToMessageConverter converter;
 
 	/**
 	 * Creates a new repository.
@@ -57,7 +56,7 @@ public class BedrockChatMemoryRepository implements ChatMemoryRepository {
 	 * @param converter converts AgentCore events to Spring AI messages
 	 */
 	public BedrockChatMemoryRepository(BedrockAgentCoreClient client, BedrockChatMemoryRepositoryConfig config,
-			AgentCoreEventToMessageConverter converter) {
+			BedrockAgentCoreEventToMessageConverter converter) {
 		this.client = client;
 		this.config = config;
 		this.converter = converter;

@@ -16,7 +16,7 @@ import java.util.Objects;
 import java.util.function.Consumer;
 
 /**
- * Converts AgentCore {@link Event} objects to Spring AI {@link Message} objects.
+ * Converts Bedrock AgentCore {@link Event} objects to Spring AI {@link Message} objects.
  *
  * <p>
  * Only {@code Conversational} payload events with {@code USER} or {@code ASSISTANT} roles
@@ -30,7 +30,7 @@ import java.util.function.Consumer;
  * {@link io.github.cokelee777.a2a.model.chat.memory.repository.bedrock.agentcore.autoconfigure.BedrockChatMemoryAutoConfiguration}.
  * </p>
  */
-public class AgentCoreEventToMessageConverter {
+public class BedrockAgentCoreEventToMessageConverter {
 
 	/**
 	 * Converts a list of {@link Event} objects to Spring AI {@link Message} objects,

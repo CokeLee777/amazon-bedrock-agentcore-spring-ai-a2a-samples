@@ -52,7 +52,7 @@ class BedrockChatMemoryRepositoryTest {
 			.memoryId(MEMORY_ID)
 			.maxTurns(10)
 			.build();
-		AgentCoreEventToMessageConverter converter = new AgentCoreEventToMessageConverter();
+		BedrockAgentCoreEventToMessageConverter converter = new BedrockAgentCoreEventToMessageConverter();
 		repository = new BedrockChatMemoryRepository(client, config, converter);
 	}
 

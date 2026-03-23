@@ -16,13 +16,13 @@ import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-class AgentCoreEventToMessageConverterTest {
+class BedrockAgentCoreEventToMessageConverterTest {
 
-	private AgentCoreEventToMessageConverter converter;
+	private BedrockAgentCoreEventToMessageConverter converter;
 
 	@BeforeEach
 	void setUp() {
-		converter = new AgentCoreEventToMessageConverter();
+		converter = new BedrockAgentCoreEventToMessageConverter();
 	}
 
 	@Test
