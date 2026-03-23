@@ -10,6 +10,27 @@ val awsSdkVersion by extra("2.42.9")
 val a2aVersion by extra("0.3.3.Final")
 val jspecifyVersion by extra("1.0.0")
 
+java {
+    sourceSets.named("main") {
+        java.setSrcDirs(emptyList<File>())
+    }
+    sourceSets.named("test") {
+        java.setSrcDirs(emptyList<File>())
+    }
+}
+
+tasks.named("build") {
+    enabled = false
+}
+
+tasks.named("assemble") {
+    enabled = false
+}
+
+tasks.named("jar") {
+    enabled = false
+}
+
 subprojects {
     apply(plugin = "java")
     apply(plugin = "org.springframework.boot")
@@ -68,16 +89,4 @@ subprojects {
         (options as StandardJavadocDocletOptions)
             .addStringOption("Xdoclint:none", "-quiet")
     }
-}
-
-tasks.named("build") {
-    enabled = false
-}
-
-tasks.named("assemble") {
-    enabled = false
-}
-
-tasks.named("jar") {
-    enabled = false
 }
