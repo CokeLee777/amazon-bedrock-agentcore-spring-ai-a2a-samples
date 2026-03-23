@@ -22,7 +22,7 @@ import org.springframework.web.bind.annotation.RestController;
 @Slf4j
 @RestController
 @RequiredArgsConstructor
-public class InvocationsController {
+public class InvocationController {
 
 	private final InvocationService invocationService;
 

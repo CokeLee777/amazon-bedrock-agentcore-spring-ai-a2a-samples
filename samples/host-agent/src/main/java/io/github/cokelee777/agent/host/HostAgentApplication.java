@@ -17,7 +17,7 @@ import org.springframework.context.annotation.Bean;
  * </p>
  *
  * <p>
- * The system prompt is applied per request in {@link InvocationsController#invoke} so
+ * The system prompt is applied per request in {@link InvocationController#invoke} so
  * that agent descriptions always reflect the latest loaded {@link io.a2a.spec.AgentCard
  * AgentCards}.
  * </p>
