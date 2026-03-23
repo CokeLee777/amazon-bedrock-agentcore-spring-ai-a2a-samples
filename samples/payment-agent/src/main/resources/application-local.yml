@@ -8,3 +8,8 @@ server:
 
 a2a:
   agent-url: http://localhost:9003
+
+logging:
+  level:
+    io.github.cokelee777: DEBUG
+    org.springframework.ai: DEBUG

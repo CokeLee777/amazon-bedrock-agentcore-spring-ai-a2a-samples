@@ -15,3 +15,8 @@ remote:
       url: http://localhost:9002
     payment-agent:
       url: http://localhost:9003
+
+logging:
+  level:
+    io.github.cokelee777: DEBUG
+    org.springframework.ai: DEBUG
