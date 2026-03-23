@@ -146,8 +146,8 @@ spring-ai-a2a/
 - `ChatMemoryRepository` 구현체. `conversationId = "actorId:sessionId"` 복합키 파싱.
 - `findByConversationId` — `listEvents(maxResults = maxTurns * 2)` → `AgentCoreEventToMessageConverter` 변환, 오름차순 정렬.
 - `saveAll` — `createEvent` 호출 (append-only, `JdbcChatMemoryRepository`와 동일한 semantics). `DefaultInvocationService`는 새 2개 메시지만 전달.
-- `deleteByConversationId` — no-op (Bedrock AgentCore API 미지원).
-- `findConversationIds` — 빈 리스트 반환 (Bedrock API 미지원).
+- `deleteByConversationId` — `UnsupportedOperationException` (삭제 API 미지원).
+- `findConversationIds` — `UnsupportedOperationException` (목록 API 미지원).
 
 ### auto-configure 활성화 조건
 

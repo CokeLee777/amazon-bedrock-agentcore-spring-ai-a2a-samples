@@ -59,6 +59,8 @@ public class BedrockAgentCoreEventToMessageConverter {
 	 * @return a {@link Message}, or {@code null} when the event should be skipped
 	 */
 	private @Nullable Message toMessage(Event event) {
+		Assert.notNull(event, "event must not be null");
+
 		if (event.payload() == null || event.payload().isEmpty()) {
 			return null;
 		}

@@ -23,6 +23,7 @@ import java.time.Instant;
 import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.isA;
 import static org.mockito.Mockito.never;
@@ -130,16 +131,20 @@ class BedrockChatMemoryRepositoryTest {
 	}
 
 	@Test
-	void deleteByConversationId_noApiCalls() {
-		repository.deleteByConversationId(CONVERSATION_ID);
+	void deleteByConversationId_throwsUnsupportedOperationException() {
+		assertThatThrownBy(() -> repository.deleteByConversationId(CONVERSATION_ID))
+			.isInstanceOf(UnsupportedOperationException.class)
+			.hasMessageContaining("deleteByConversationId is not supported")
+			.hasMessageContaining(CONVERSATION_ID);
 
 		verify(client, never()).createEvent(isA(CreateEventRequest.class));
 		verify(client, never()).listEvents(isA(ListEventsRequest.class));
 	}
 
 	@Test
-	void findConversationIds_returnsEmpty() {
-		assertThat(repository.findConversationIds()).isEmpty();
+	void findConversationIds_throwsUnsupportedOperationException() {
+		assertThatThrownBy(() -> repository.findConversationIds()).isInstanceOf(UnsupportedOperationException.class)
+			.hasMessageContaining("findConversationIds is not supported");
 	}
 
 	private Event buildEvent(String text, Role role, Instant timestamp) {

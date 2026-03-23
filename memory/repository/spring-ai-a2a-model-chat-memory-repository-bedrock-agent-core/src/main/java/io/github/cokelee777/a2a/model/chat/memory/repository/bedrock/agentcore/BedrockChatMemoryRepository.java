@@ -34,8 +34,9 @@ import java.util.Objects;
  *
  * <p>
  * Pagination is not handled: only the most recent {@code maxTurns * 2} events are loaded.
- * {@code deleteByConversationId} is a no-op because Bedrock AgentCore does not expose an
- * event-deletion API.
+ * {@code findConversationIds} and {@code deleteByConversationId} throw
+ * {@link UnsupportedOperationException} because Bedrock AgentCore Memory does not expose
+ * listing or deletion APIs for events.
  * </p>
  */
 @Slf4j
@@ -63,12 +64,14 @@ public class BedrockChatMemoryRepository implements ChatMemoryRepository {
 	}
 
 	/**
-	 * Not supported by Bedrock AgentCore API.
-	 * @return empty list
+	 * Not supported: Bedrock AgentCore Memory has no API to list conversation
+	 * identifiers.
+	 * @throws UnsupportedOperationException always
 	 */
 	@Override
 	public List<String> findConversationIds() {
-		return List.of();
+		throw new UnsupportedOperationException(
+				"findConversationIds is not supported by Bedrock AgentCore Memory (no list API)");
 	}
 
 	/**
@@ -78,6 +81,8 @@ public class BedrockChatMemoryRepository implements ChatMemoryRepository {
 	 */
 	@Override
 	public List<Message> findByConversationId(String conversationId) {
+		Assert.hasText(conversationId, "conversationId must not be empty");
+
 		String[] parts = parseConversationId(conversationId);
 		try {
 			ListEventsRequest request = ListEventsRequest.builder()
@@ -105,9 +110,10 @@ public class BedrockChatMemoryRepository implements ChatMemoryRepository {
 	 */
 	@Override
 	public void saveAll(String conversationId, List<Message> messages) {
-		if (messages.isEmpty()) {
-			return;
-		}
+		Assert.hasText(conversationId, "conversationId must not be empty");
+		Assert.notNull(messages, "messages must not be null");
+		Assert.noNullElements(messages, "messages must contain non-null elements");
+
 		String[] parts = parseConversationId(conversationId);
 		for (Message message : messages) {
 			try {
@@ -133,13 +139,15 @@ public class BedrockChatMemoryRepository implements ChatMemoryRepository {
 	}
 
 	/**
-	 * No-op: Bedrock AgentCore does not support event deletion.
-	 * @param conversationId the conversation identifier (logged only)
+	 * Not supported: Bedrock AgentCore Memory has no API to delete events.
+	 * @param conversationId the conversation identifier
+	 * @throws UnsupportedOperationException always
 	 */
 	@Override
 	public void deleteByConversationId(String conversationId) {
-		log.warn("deleteByConversationId is not supported by Bedrock AgentCore Memory API. conversationId={}",
-				conversationId);
+		throw new UnsupportedOperationException(
+				"deleteByConversationId is not supported by Bedrock AgentCore Memory (no delete API); conversationId="
+						+ conversationId);
 	}
 
 	private String[] parseConversationId(String conversationId) {
