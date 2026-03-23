@@ -36,23 +36,6 @@ AgentCore → host-agent ──┬→ order-agent    (동시)
 
 ---
 
-## 선결 과제: A2ATransport 빈 전환 (Step 0)
-
-현재 `A2ATransport`는 static 유틸리티 클래스다. `ObservationRegistry` 주입을 위해
-Spring 관리 빈으로 전환이 선행되어야 한다.
-
-### 변경 범위
-
-| 대상 | 변경 내용 |
-|------|----------|
-| `A2ATransport` | `@Component` 빈 전환, `ObservationRegistry` 생성자 주입 |
-| `RemoteAgentConnections` (host-agent) | `A2ATransport` 빈 생성자 주입으로 교체 |
-| `DeliveryAgentClient` (order-agent) | `A2ATransport` 빈 생성자 주입으로 교체 |
-| `PaymentAgentClient` (order-agent) | `A2ATransport` 빈 생성자 주입으로 교체 |
-| `A2ATransportTest` | static 호출 방식 → 빈 기반 테스트로 리팩터링 |
-
----
-
 ## 모듈 구조
 
 ### 신규 모듈
@@ -65,18 +48,19 @@ auto-configurations/observability/
         ├── @ConditionalOnProperty(prefix="spring.ai.a2a.observability", name="enabled", matchIfMissing=true)
         ├── @AutoConfiguration(after = {MicrometerAutoConfiguration.class, ObservationAutoConfiguration.class})
         ├── ObservationRegistry 빈 (@ConditionalOnMissingBean) — ObservationAutoConfiguration 없는 환경 fallback
-        └── OtlpMeterRegistry 빈 (@ConditionalOnProperty("OTEL_EXPORTER_OTLP_ENDPOINT")) — 사용자가 opentelemetry-exporter-otlp를 직접 추가해야 활성화됨
+        └── OtlpMeterRegistry 빈 (OTEL_EXPORTER_OTLP_ENDPOINT 환경변수 존재 시) — 사용자가 opentelemetry-exporter-otlp를 직접 추가해야 활성화
 ```
 
 `spring/autoconfigure/auto-configuration.imports`에 등록 필요.
+`settings.gradle.kts`에 `:spring-ai-a2a-autoconfigure-observability` include 추가 필요.
 
 ### 기존 모듈 변경
 
 | 모듈 | 변경 내용 |
 |------|----------|
-| `spring-ai-a2a-agent-common` | `A2ATransport` 빈 전환 + `send()` Observation 수동 wrap |
+| `spring-ai-a2a-agent-common` | `spring-boot-starter-web` 의존성 제거 (완료) |
 | `spring-ai-a2a-server` | `DefaultAgentExecutor`에 `ObservationRegistry` 생성자 주입, `micrometer-observation` 의존성 추가 |
-| 각 sample 모듈 | `micrometer-tracing-bridge-otel` 의존성 추가, `A2ATransport` 빈 주입 방식 변경 |
+| 각 sample 모듈 | `spring-ai-a2a-autoconfigure-observability` 의존성 추가 (bridge 포함됨) |
 
 > `DefaultAgentExecutor`에 `ObservationRegistry` 주입을 위해 `spring-ai-a2a-server`의
 > 생성자 시그니처가 변경된다. 라이브러리 사용자 영향 범위 검토 필요.
@@ -88,11 +72,24 @@ auto-configurations/observability/
 | 위치 | 계측 방법 | Span 이름 |
 |------|----------|-----------|
 | `InvocationsController.invoke()` | Spring MVC 자동 계측 | `POST /invocations` |
-| `A2ATransport.send()` | `Observation` 수동 wrap | `a2a.agent.send` (agentName 태그 포함) |
+| `RemoteAgentConnections.sendMessage()` | `Observation` 수동 wrap | `a2a.agent.send` (agentName 태그 포함) |
+| `DeliveryAgentClient.send()` | `Observation` 수동 wrap | `a2a.agent.send` (agentName 태그 포함) |
+| `PaymentAgentClient.send()` | `Observation` 수동 wrap | `a2a.agent.send` (agentName 태그 포함) |
 | `DefaultAgentExecutor.execute()` | `Observation` 수동 wrap | `a2a.agent.execute` |
 
-> `@Observed`는 사용하지 않는다. `DefaultAgentExecutor.execute()`는 A2A SDK가 직접 호출하므로
-> Spring AOP 프록시를 통하지 않아 `@Observed`가 동작하지 않는다.
+> `A2ATransport`는 Spring 비의존 static 유틸리티로 유지. 계측은 이미 `@Component`인 호출부에서 담당.
+> `@Observed`는 사용하지 않음 — `DefaultAgentExecutor.execute()`는 A2A SDK가 직접 호출하므로 AOP 프록시 미경유.
+
+### 호출부 계측 패턴
+
+```java
+// RemoteAgentConnections, DeliveryAgentClient, PaymentAgentClient (이미 @Component)
+// ObservationRegistry 생성자 주입 후:
+
+Observation.createNotStarted("a2a.agent.send", observationRegistry)
+    .lowCardinalityKeyValue("agentName", agentName)
+    .observe(() -> A2ATransport.send(agentCard, message));
+```
 
 ---
 
@@ -100,22 +97,19 @@ auto-configurations/observability/
 
 ```
 host-agent (span: POST /invocations)
-  └─ A2ATransport.send("order-agent")
-       → HTTP 요청에 traceparent 헤더 수동 주입
-       → order-agent (span: a2a.agent.send, a2a.agent.execute)
-            └─ A2ATransport.send("delivery-agent")
+  └─ RemoteAgentConnections.sendMessage() (span: a2a.agent.send)
+       → A2A SDK 내부 HTTP 요청에 traceparent 헤더 수동 주입
+       → order-agent (span: a2a.agent.execute)
+            └─ DeliveryAgentClient.send() (span: a2a.agent.send)
                  → delivery-agent (span: ...)
 ```
 
-**[TBD — 구현 전 확인 필요]** `A2ATransport`는 매 호출마다 A2A SDK `Client.builder().build()`로
-새 클라이언트를 생성하고, 내부 transport는 `JSONRPCTransportConfig`를 사용한다.
-`JSONRPCTransportConfig`에 커스텀 HTTP 헤더 주입 API가 존재하는지 A2A SDK 0.3.3.Final
-소스에서 확인해야 한다. API가 없을 경우 다음 대안 중 선택:
+**[TBD — 구현 전 확인 필요]** `A2ATransport`는 A2A SDK의 `JdkA2AHttpClient`(`java.net.http.HttpClient`)를
+사용하므로 Micrometer RestClient 자동 전파가 적용되지 않는다.
+`JSONRPCTransportConfig`에 커스텀 HTTP 헤더 주입 API 존재 여부를 A2A SDK 0.3.3.Final 소스에서 확인 필요.
+API가 없을 경우 대안:
 - `JSONRPCTransportConfig` 서브클래싱
 - SDK가 제공하는 인터셉터/데코레이터 패턴 사용
-
-Spring `RestClient`가 아닌 `JdkA2AHttpClient`(`java.net.http.HttpClient`)를 사용하므로
-Micrometer RestClient 자동 계측은 적용되지 않는다.
 
 ---
 
@@ -143,13 +137,10 @@ LLM 응답 (여러 tool call 포함)
 - `A2ATransport.send()` blocking 코드 변경 없음 (virtual thread에서 안전)
 
 **[TBD — 구현 전 확인 필요]** Spring AI 1.1.3의 `ChatClient` / `DefaultChatClient` 내부 tool call 루프의
-공개 확장 지점(`ToolCallingManager`, `ToolCallResultConverter` 등)이 어느 수준으로 제공되는지 확인 필요.
+공개 확장 지점(`ToolCallingManager`, `ToolCallResultConverter` 등) 수준 확인 필요.
 확장 지점이 제한적일 경우 `ChatClient` wrapping 방식으로 우회 전략 수립.
 
-### 구현 범위 조정
-
-Observability와 독립적으로 구현 가능하므로 **별도 단계**로 진행.
-구현 플랜 단계에서 Spring AI 확장 지점 조사 후 범위 확정.
+Observability와 독립적으로 구현 가능하므로 **별도 단계(Phase 2)**로 진행.
 
 ---
 
@@ -174,7 +165,7 @@ Observability와 독립적으로 구현 가능하므로 **별도 단계**로 진
 ```
 
 OTLP exporter 활성화: `OTEL_EXPORTER_OTLP_ENDPOINT` 환경변수 설정 +
-사용자가 `opentelemetry-exporter-otlp` 의존성 직접 추가 필요 (라이브러리에서는 `compileOnly` 처리).
+사용자가 `opentelemetry-exporter-otlp` 의존성 직접 추가 필요.
 
 ---
 
@@ -182,7 +173,7 @@ OTLP exporter 활성화: `OTEL_EXPORTER_OTLP_ENDPOINT` 환경변수 설정 +
 
 | 종류 | 내용 |
 |------|------|
-| 단위 테스트 | `A2ATransport` — `ObservationRegistry` mock으로 span 생성 및 `traceparent` 헤더 주입 검증 |
+| 단위 테스트 | `RemoteAgentConnections` / `DeliveryAgentClient` / `PaymentAgentClient` — `ObservationRegistry` mock으로 span 생성 검증 |
 | 통합 테스트 | `HostAgentIntegrationTest` 확장 — 다운스트림 요청에 `traceparent` 헤더가 포함되는지 검증 |
 | 병렬 실행 검증 | 병렬 실행 구현 완료 후 — 실행 시간이 순차 합산보다 짧은지 확인 |
 
@@ -195,14 +186,11 @@ OTLP exporter 활성화: `OTEL_EXPORTER_OTLP_ENDPOINT` 환경변수 설정 +
 implementation("io.micrometer:micrometer-tracing-bridge-otel")
 compileOnly("io.opentelemetry:opentelemetry-exporter-otlp")  // 사용자 직접 추가 필요
 
-// spring-ai-a2a-agent-common/build.gradle.kts
-implementation("io.micrometer:micrometer-observation")  // A2ATransport 빈 전환 후 필요
-
 // spring-ai-a2a-server/build.gradle.kts
 implementation("io.micrometer:micrometer-observation")
 
 // 각 에이전트 sample build.gradle.kts
-implementation("io.micrometer:micrometer-tracing-bridge-otel")
+implementation(project(":spring-ai-a2a-autoconfigure-observability"))  // bridge 포함
 ```
 
 ---
@@ -211,17 +199,16 @@ implementation("io.micrometer:micrometer-tracing-bridge-otel")
 
 ### Phase 1: Observability
 
-1. **[선결]** `A2ATransport` static → Spring 빈 전환 + 호출부 3곳 변경 + 테스트 리팩터링
-2. `spring-ai-a2a-autoconfigure-observability` 모듈 생성 (`auto-configurations/observability/` 하위, `settings.gradle.kts` include 추가 필요)
-3. **[TBD 확인]** A2A SDK `JSONRPCTransportConfig` 헤더 주입 API 조사 → `traceparent` 주입 방식 확정
-4. `A2ATransport.send()` Observation 수동 wrap + `traceparent` 헤더 주입 구현
-5. `DefaultAgentExecutor.execute()` Observation 수동 wrap
-6. 각 sample 모듈 `micrometer-tracing-bridge-otel` 의존성 추가
-7. 단위 테스트 + 통합 테스트 작성
+1. `spring-ai-a2a-autoconfigure-observability` 모듈 생성 (`auto-configurations/observability/` 하위, `settings.gradle.kts` include 추가)
+2. **[TBD 확인]** A2A SDK `JSONRPCTransportConfig` 헤더 주입 API 조사 → `traceparent` 주입 방식 확정
+3. `RemoteAgentConnections`, `DeliveryAgentClient`, `PaymentAgentClient`에 `ObservationRegistry` 주입 + `Observation` 수동 wrap
+4. `DefaultAgentExecutor.execute()` `Observation` 수동 wrap (`micrometer-observation` 의존성 추가)
+5. 각 sample 모듈에 `spring-ai-a2a-autoconfigure-observability` 의존성 추가
+6. 단위 테스트 + 통합 테스트 작성
 
 ### Phase 2: 병렬 실행 (Phase 1 완료 후)
 
-8. **[TBD 확인]** Spring AI 1.1.3 tool call 확장 지점 조사
-9. `ToolCallParallelExecutor` 구현 + `a2aTaskExecutor` 연동
-10. `parallelToolCalls` LLM 옵션 설정 (BedrockConverseOptions 지원 여부 확인 후)
-11. 병렬 실행 검증 테스트
+7. **[TBD 확인]** Spring AI 1.1.3 tool call 확장 지점 조사
+8. `ToolCallParallelExecutor` 구현 + `a2aTaskExecutor` 연동
+9. `parallelToolCalls` LLM 옵션 설정 (BedrockConverseOptions 지원 여부 확인 후)
+10. 병렬 실행 검증 테스트
