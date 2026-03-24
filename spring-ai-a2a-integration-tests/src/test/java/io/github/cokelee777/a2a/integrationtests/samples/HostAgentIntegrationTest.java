@@ -69,7 +69,7 @@ class HostAgentIntegrationTest {
 			.contentType(MediaType.APPLICATION_JSON)
 			.body(Map.of("prompt", "주문 목록 조회해줘"))
 			.retrieve()
-			.body(new ParameterizedTypeReference<Map<String, String>>() {
+			.body(new ParameterizedTypeReference<>() {
 			});
 
 		assertThat(response).containsEntry("content", MOCK_RESPONSE);
@@ -110,8 +110,8 @@ class HostAgentIntegrationTest {
 	}
 
 	/**
-	 * Verifies {@link RemoteAgentTools#sendMessage} returns a formatted error when
-	 * the requested agent name is not found.
+	 * Verifies {@link RemoteAgentTools#sendMessage} returns a formatted error when the
+	 * requested agent name is not found.
 	 */
 	@Test
 	void sendMessage_unknownAgent_returnsErrorMessage() {
