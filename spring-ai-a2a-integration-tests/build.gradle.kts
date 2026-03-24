@@ -1,5 +1,6 @@
 dependencies {
     testImplementation(project(":spring-ai-a2a-agent-common"))
+    testImplementation(project(":spring-ai-a2a-autoconfigure-agent-common"))
     testImplementation(project(":host-agent"))
     testImplementation(project(":order-agent"))
     testImplementation(project(":delivery-agent"))

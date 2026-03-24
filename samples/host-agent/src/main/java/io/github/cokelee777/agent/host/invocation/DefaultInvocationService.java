@@ -1,6 +1,6 @@
 package io.github.cokelee777.agent.host.invocation;
 
-import io.github.cokelee777.agent.host.remote.RemoteAgentTools;
+import io.github.cokelee777.a2a.agent.common.autoconfigure.RemoteAgentCardRegistry;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.jspecify.annotations.Nullable;
@@ -25,7 +25,7 @@ import java.util.UUID;
  * <li>Compose {@code conversationId} as {@code "actorId:sessionId"}.</li>
  * <li>Load history from {@link ChatMemoryRepository}.</li>
  * <li>Call the LLM via {@link ChatClient} (system prompt includes downstream agents from
- * {@link RemoteAgentTools#getAgentDescriptions()}).</li>
+ * {@link RemoteAgentCardRegistry#getAgentDescriptions()}).</li>
  * <li>Persist the new USER and ASSISTANT messages <em>after</em> the LLM call succeeds,
  * ensuring a failed call leaves no orphaned events.</li>
  * </ol>
@@ -67,7 +67,7 @@ public class DefaultInvocationService implements InvocationService {
 
 	private final ChatClient chatClient;
 
-	private final RemoteAgentTools remoteAgentTools;
+	private final RemoteAgentCardRegistry remoteAgentCardRegistry;
 
 	private final ChatMemoryRepository chatMemoryRepository;
 
@@ -81,7 +81,7 @@ public class DefaultInvocationService implements InvocationService {
 		List<Message> history = chatMemoryRepository.findByConversationId(conversationId);
 
 		String response = chatClient.prompt()
-			.system(ROUTING_SYSTEM_PROMPT.formatted(remoteAgentTools.getAgentDescriptions()))
+			.system(ROUTING_SYSTEM_PROMPT.formatted(remoteAgentCardRegistry.getAgentDescriptions()))
 			.messages(history)
 			.user(prompt)
 			.call()

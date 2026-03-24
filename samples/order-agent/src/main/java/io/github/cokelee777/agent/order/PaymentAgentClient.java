@@ -4,7 +4,7 @@ import io.a2a.A2A;
 import io.a2a.spec.Message;
 import io.github.cokelee777.a2a.agent.common.A2ATransport;
 import io.github.cokelee777.a2a.agent.common.LazyAgentCard;
-import lombok.extern.slf4j.Slf4j;
+import io.github.cokelee777.a2a.agent.common.autoconfigure.RemoteAgentCardRegistry;
 import org.springframework.stereotype.Component;
 import org.springframework.util.Assert;
 
@@ -15,21 +15,24 @@ import org.springframework.util.Assert;
  * Uses {@link LazyAgentCard} to resolve the Payment Agent's card on startup, retrying on
  * first use if startup resolution fails.
  * </p>
+ *
+ * <p>
+ * Registered when {@code a2a.remote.agents.payment-agent.url} is set.
+ * </p>
  */
-@Slf4j
 @Component
 public class PaymentAgentClient {
 
 	private final LazyAgentCard lazyCard;
 
 	/**
-	 * Creates a client targeting the payment agent URL from properties.
-	 * @param properties the remote agent connection properties
+	 * Creates a client targeting the payment agent via the shared registry.
+	 * @param remoteAgentCardRegistry registry of configured downstream agents
 	 */
-	public PaymentAgentClient(RemoteAgentProperties properties) {
-		Assert.notNull(properties, "properties must not be null");
+	public PaymentAgentClient(RemoteAgentCardRegistry remoteAgentCardRegistry) {
+		Assert.notNull(remoteAgentCardRegistry, "remoteAgentCardRegistry must not be null");
 
-		lazyCard = new LazyAgentCard(properties.agents().get("payment-agent").url());
+		lazyCard = remoteAgentCardRegistry.findLazyCardByAgentName("payment-agent");
 	}
 
 	/**

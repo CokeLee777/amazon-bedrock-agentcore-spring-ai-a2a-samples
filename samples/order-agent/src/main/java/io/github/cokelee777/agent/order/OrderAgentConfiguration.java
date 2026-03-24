@@ -11,7 +11,6 @@ import io.github.cokelee777.a2a.server.executor.ChatClientExecutorHandler;
 import io.github.cokelee777.a2a.server.executor.DefaultAgentExecutor;
 import org.springframework.ai.chat.client.ChatClient;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
@@ -22,7 +21,6 @@ import java.util.List;
  * {@link AgentExecutor}.
  */
 @Configuration
-@EnableConfigurationProperties(RemoteAgentProperties.class)
 public class OrderAgentConfiguration {
 
 	private static final String SYSTEM_PROMPT = """

@@ -92,7 +92,7 @@ Agent       Agent     Agent
 **host-agent 패키지 구조** (`io.github.cokelee777.agent.host` 기준)
 
 - `invocation` — `POST /invocations` (`InvocationController`), orchestrator `ChatClient` 빈 (`InvocationConfiguration`), `InvocationService` / `DefaultInvocationService` 및 요청·응답 타입
-- `remote` — 다운스트림 A2A URL 설정 (`RemoteAgentProperties`), 위임 DTO (`RemoteAgentDelegationRequest`), Spring AI `@Tool` (`RemoteAgentTools`)
+- `remote` — 위임 DTO (`RemoteAgentDelegationRequest`), Spring AI `@Tool` (`RemoteAgentTools`); 다운스트림 URL은 `a2a.remote.agents` (`RemoteAgentProperties`, autoconfigure 모듈)
 - 루트 — `HostAgentApplication` (부트스트랩)
 
 ### 전제 조건

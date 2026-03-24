@@ -16,10 +16,9 @@ spring:
 
 a2a:
   agent-url: ${AGENT_URL:}
-
-remote:
-  agents:
-    delivery-agent:
-      url: ${DELIVERY_AGENT_URL:}
-    payment-agent:
-      url: ${PAYMENT_AGENT_URL:}
+  remote:
+    agents:
+      delivery-agent:
+        url: ${DELIVERY_AGENT_URL:}
+      payment-agent:
+        url: ${PAYMENT_AGENT_URL:}

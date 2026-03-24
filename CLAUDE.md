@@ -39,7 +39,9 @@ spring-ai-a2a/
 │   └── executor/ChatClientExecutorHandler   # 에이전트 로직 위임 함수형 인터페이스
 ├── auto-configurations/agent/common/
 │   └── spring-ai-a2a-autoconfigure-agent-common/   # 에이전트 공통 자동 구성
-│       └── AgentCommonAutoConfiguration     # PingController 등록 (항상 활성화)
+│       ├── AgentCommonAutoConfiguration     # PingController, RemoteAgentProperties, RemoteAgentCardRegistry
+│       ├── RemoteAgentProperties              # @ConfigurationProperties(prefix=a2a.remote)
+│       └── RemoteAgentCardRegistry            # LazyAgentCard 레지스트리
 ├── auto-configurations/server/
 │   └── spring-ai-a2a-autoconfigure-server/          # A2A 서버 인프라 자동 구성
 │       ├── A2AServerAutoConfiguration       # ChatClient 클래스가 클래스패스에 있을 때 활성화
@@ -64,15 +66,14 @@ spring-ai-a2a/
 │   │   │   ├── DefaultInvocationService     # ChatMemoryRepository, actorId:sessionId 복합키
 │   │   │   └── InvocationRequest/Response, InvocationService
 │   │   ├── remote/                          # 다운스트림 A2A 연동
-│   │   │   ├── RemoteAgentTools             # @Tool sendMessage / sendMessagesParallel, LazyAgentCard 맵
-│   │   │   ├── RemoteAgentProperties        # remote.agents URL 설정
+│   │   │   ├── RemoteAgentTools             # @Tool sendMessage / sendMessagesParallel, RemoteAgentCardRegistry 주입
 │   │   │   └── RemoteAgentDelegationRequest # 툴 파라미터 record
-│   │   └── HostAgentApplication             # 부트스트랩, @EnableConfigurationProperties(RemoteAgentProperties)
+│   │   └── HostAgentApplication             # 부트스트랩
 │   ├── order-agent/  (port: 9001)           # 주문 조회 · 취소 가능 여부 확인 A2A 에이전트
 │   │   ├── OrderTools                       # getOrderList, checkOrderCancellability
 │   │   ├── DeliveryAgentClient              # delivery-agent 호출 클라이언트 (LazyAgentCard)
 │   │   ├── PaymentAgentClient               # payment-agent 호출 클라이언트 (LazyAgentCard)
-│   │   └── RemoteAgentProperties            # 다운스트림 에이전트 URL 설정
+│   │   └── OrderAgentConfiguration          # A2A 서버 빈; 다운스트림 URL은 a2a.remote.agents (autoconfigure)
 │   ├── delivery-agent/ (port: 9002)         # 배송 추적 A2A 에이전트
 │   │   └── DeliveryTools                    # trackDelivery
 │   └── payment-agent/ (port: 9003)          # 결제/환불 상태 확인 A2A 에이전트
@@ -100,19 +101,26 @@ spring-ai-a2a/
 - `peek()` — 네트워크 호출 없이 현재 캐시 상태만 반환. 시스템 프롬프트 생성 등 정보 조회에 사용한다.
   (startup 시 `get()` 대신 `peek()`를 쓰지 않으면 에이전트 수 × 조회 횟수만큼 불필요한 WARN이 발생한다.)
 
+### RemoteAgentCardRegistry (`spring-ai-a2a-autoconfigure-agent-common`)
+
+- `a2a.remote.agents` YAML 맵 키(예: `order-agent`)마다 하나의 `LazyAgentCard`를 등록한다. (과거 `remote.agents`는 **`a2a.remote.agents`** 로 이전.)
+- `findCardByAgentName` — LLM이 쓰는 라우팅 이름은 `AgentCard#name()`(카드 JSON) 기준. 각 `LazyAgentCard`에 대해 `peek()`가 비어 있으면 해당 항목만 `get()`으로 해소한 뒤 첫 일치를 반환한다.
+- `findLazyCardByAgentName` — 설정 맵의 **키**로 `LazyAgentCard`를 꺼낸다. `order-agent`의 `DeliveryAgentClient` / `PaymentAgentClient`가 사용한다.
+- `getAgentDescriptions` — 오케스트레이터 시스템 프롬프트용 JSON 줄 묶음. 캐시가 하나라도 있으면 `peek()`만 사용하고, 전부 비어 있으면 각 카드에 `get()`을 시도한다(첫 사용자 턴에서도 라우팅 가능한 목록을 주기 위함).
+- `peekCachedAgentCards` — 네트워크 없이 캐시된 카드만 스냅샷(알 수 없는 에이전트 에러 메시지의 “사용 가능한 에이전트” 목록 등).
+
 ### RemoteAgentTools (`host-agent` → `remote`)
 
 - 패키지: `io.github.cokelee777.agent.host.remote`.
 - `@Tool` 메서드 `sendMessage(RemoteAgentDelegationRequest)` 로 단일 다운스트림 호출, 병렬 배치는 `sendMessagesParallel(List<RemoteAgentDelegationRequest>)`.
 - 각 파라미터에 `@ToolParam(description = "...")` 을 달아 LLM이 올바른 값을 추론하도록 돕는다.
-- 내부적으로 `Map<String, LazyAgentCard>` (config key → LazyAgentCard)를 관리한다.
-  `sendMessage` 는 card name으로 조회(`get()` 경유), `getAgentDescriptions` 는 `peek()` 경유.
+- `RemoteAgentCardRegistry`를 주입받는다. `sendMessage` / `sendMessagesParallel`은 `findCardByAgentName`으로 카드를 해소하고 `A2ATransport`로 전송한다. 알 수 없는 이름일 때는 `peekCachedAgentCards()` 기반으로 영문 한 줄 에러를 반환한다.
 
 ### Invocation 경로 (`host-agent` → `invocation`)
 
 - `InvocationController` — AgentCore Runtime → `POST /invocations`.
 - `InvocationConfiguration` — orchestrator용 `ChatClient` 빈 (`RemoteAgentTools`를 defaultTools로 등록, `SimpleLoggerAdvisor` 등).
-- `DefaultInvocationService` — 시스템 프롬프트를 **매 요청마다** `connections.getAgentDescriptions()`로 동적 생성한다.
+- `DefaultInvocationService` — 시스템 프롬프트를 **매 요청마다** `RemoteAgentCardRegistry#getAgentDescriptions()`로 동적 생성한다.
   빈 초기화 시 고정(static)하면 시작 후 lazy 로드된 에이전트가 프롬프트에 반영되지 않는다.
 
 ### Spring AI Tool Calling
@@ -160,7 +168,7 @@ spring-ai-a2a/
 ### auto-configure 활성화 조건
 
 - `A2AServerAutoConfiguration` — `@ConditionalOnClass(ChatClient.class)` + `@ConditionalOnProperty(spring.ai.a2a.server.enabled, matchIfMissing=true)`. A2A 서버 인프라(컨트롤러, Executor, TaskStore 등) 자동 구성.
-- `AgentCommonAutoConfiguration` — 조건 없이 항상 활성화. PingController (`GET /ping`) 등록.
+- `AgentCommonAutoConfiguration` — 조건 없이 항상 활성화. `PingController` (`GET /ping`), `@EnableConfigurationProperties(RemoteAgentProperties)` (`a2a.remote.*`), `RemoteAgentCardRegistry` 빈 등록.
 
 ## Docker 빌드
 

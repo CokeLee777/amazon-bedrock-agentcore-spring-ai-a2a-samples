@@ -1,5 +1,7 @@
 package io.github.cokelee777.agent.host.remote;
 
+import io.github.cokelee777.a2a.agent.common.autoconfigure.RemoteAgentCardRegistry;
+import io.github.cokelee777.a2a.agent.common.autoconfigure.RemoteAgentProperties;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
@@ -15,8 +17,8 @@ class RemoteAgentToolsTest {
 
 	@BeforeEach
 	void setUp() {
-		remoteAgentTools = new RemoteAgentTools(
-				new RemoteAgentProperties(Map.of("dummy", new RemoteAgentProperties.Agent("http://127.0.0.1:9"))));
+		remoteAgentTools = new RemoteAgentTools(new RemoteAgentCardRegistry(
+				new RemoteAgentProperties(Map.of("dummy", new RemoteAgentProperties.Agent("http://127.0.0.1:9")))));
 	}
 
 	@Test

@@ -1,6 +1,6 @@
 package io.github.cokelee777.agent.host.invocation;
 
-import io.github.cokelee777.agent.host.remote.RemoteAgentTools;
+import io.github.cokelee777.a2a.agent.common.autoconfigure.RemoteAgentCardRegistry;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
@@ -10,9 +10,8 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.ai.chat.client.ChatClient;
 import org.springframework.ai.chat.memory.ChatMemoryRepository;
 import org.springframework.ai.chat.messages.AssistantMessage;
-import org.springframework.ai.chat.messages.UserMessage;
-
 import org.springframework.ai.chat.messages.Message;
+import org.springframework.ai.chat.messages.UserMessage;
 
 import java.util.List;
 
@@ -43,13 +42,13 @@ class DefaultInvocationServiceTest {
 	private ChatClient.CallResponseSpec callSpec;
 
 	@Mock
-	private RemoteAgentTools remoteAgentTools;
+	private RemoteAgentCardRegistry remoteAgentCardRegistry;
 
 	@Test
 	void invoke_loadsHistoryAndSavesNewMessagesAfterLlmCall() {
 		when(chatMemoryRepository.findByConversationId(anyString())).thenReturn(List.of(new UserMessage("prev")));
 		setupChatClientChain("ok");
-		when(remoteAgentTools.getAgentDescriptions()).thenReturn("");
+		when(remoteAgentCardRegistry.getAgentDescriptions()).thenReturn("");
 
 		service().invoke(new InvocationRequest("hi", "actor-1", "session-1"));
 
@@ -68,7 +67,7 @@ class DefaultInvocationServiceTest {
 	void invoke_savesOnlyTwoNewMessages() {
 		when(chatMemoryRepository.findByConversationId(anyString())).thenReturn(List.of());
 		setupChatClientChain("reply");
-		when(remoteAgentTools.getAgentDescriptions()).thenReturn("");
+		when(remoteAgentCardRegistry.getAgentDescriptions()).thenReturn("");
 
 		service().invoke(new InvocationRequest("hello", "a", "s"));
 
@@ -82,7 +81,7 @@ class DefaultInvocationServiceTest {
 	void invoke_nullActorId_generatesUuid() {
 		when(chatMemoryRepository.findByConversationId(anyString())).thenReturn(List.of());
 		setupChatClientChain("hi");
-		when(remoteAgentTools.getAgentDescriptions()).thenReturn("");
+		when(remoteAgentCardRegistry.getAgentDescriptions()).thenReturn("");
 
 		InvocationResponse response = service().invoke(new InvocationRequest("hello", null, null));
 
@@ -94,7 +93,7 @@ class DefaultInvocationServiceTest {
 	void invoke_providedIds_returnsSameIds() {
 		when(chatMemoryRepository.findByConversationId(anyString())).thenReturn(List.of());
 		setupChatClientChain("reply");
-		when(remoteAgentTools.getAgentDescriptions()).thenReturn("");
+		when(remoteAgentCardRegistry.getAgentDescriptions()).thenReturn("");
 
 		InvocationResponse response = service().invoke(new InvocationRequest("hi", "actor-1", "sess-42"));
 
@@ -106,7 +105,7 @@ class DefaultInvocationServiceTest {
 	void invoke_alwaysReturnsNonNullIds() {
 		when(chatMemoryRepository.findByConversationId(anyString())).thenReturn(List.of());
 		setupChatClientChain("hi");
-		when(remoteAgentTools.getAgentDescriptions()).thenReturn("");
+		when(remoteAgentCardRegistry.getAgentDescriptions()).thenReturn("");
 
 		InvocationResponse response = service().invoke(new InvocationRequest("hello", null, null));
 
@@ -117,7 +116,7 @@ class DefaultInvocationServiceTest {
 	@Test
 	void invoke_llmFailure_noMemorySaved() {
 		when(chatMemoryRepository.findByConversationId(anyString())).thenReturn(List.of());
-		when(remoteAgentTools.getAgentDescriptions()).thenReturn("");
+		when(remoteAgentCardRegistry.getAgentDescriptions()).thenReturn("");
 		when(chatClient.prompt()).thenReturn(requestSpec);
 		when(requestSpec.system(anyString())).thenReturn(requestSpec);
 		when(requestSpec.messages(anyList())).thenReturn(requestSpec);
@@ -131,7 +130,7 @@ class DefaultInvocationServiceTest {
 	}
 
 	private DefaultInvocationService service() {
-		return new DefaultInvocationService(chatClient, remoteAgentTools, chatMemoryRepository);
+		return new DefaultInvocationService(chatClient, remoteAgentCardRegistry, chatMemoryRepository);
 	}
 
 	private void setupChatClientChain(String content) {

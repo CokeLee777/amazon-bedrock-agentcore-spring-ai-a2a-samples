@@ -2,14 +2,15 @@
 # This file takes precedence over agent jar application.yml files on the classpath,
 # so it must provide all properties that integration tests rely on.
 
-remote:
-  agents:
-    order-agent:
-      url: http://localhost:19901
-    delivery-agent:
-      url: http://localhost:19902
-    payment-agent:
-      url: http://localhost:19903
+a2a:
+  remote:
+    agents:
+      order-agent:
+        url: http://localhost:19901
+      delivery-agent:
+        url: http://localhost:19902
+      payment-agent:
+        url: http://localhost:19903
 
 aws:
   bedrock:

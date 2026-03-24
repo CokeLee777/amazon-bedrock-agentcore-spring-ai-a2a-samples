@@ -18,11 +18,12 @@ spring:
               memory-id: ${BEDROCK_MEMORY_ID:}
               max-turns: 10
 
-remote:
-  agents:
-    order-agent:
-      url: ${ORDER_AGENT_URL:}
-    delivery-agent:
-      url: ${DELIVERY_AGENT_URL:}
-    payment-agent:
-      url: ${PAYMENT_AGENT_URL:}
+a2a:
+  remote:
+    agents:
+      order-agent:
+        url: ${ORDER_AGENT_URL:}
+      delivery-agent:
+        url: ${DELIVERY_AGENT_URL:}
+      payment-agent:
+        url: ${PAYMENT_AGENT_URL:}

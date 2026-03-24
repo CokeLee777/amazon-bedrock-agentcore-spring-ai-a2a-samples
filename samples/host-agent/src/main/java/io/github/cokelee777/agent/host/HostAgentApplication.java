@@ -1,9 +1,7 @@
 package io.github.cokelee777.agent.host;
 
-import io.github.cokelee777.agent.host.remote.RemoteAgentProperties;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
-import org.springframework.boot.context.properties.EnableConfigurationProperties;
 
 /**
  * Entry point for the A2A Orchestrator service.
@@ -20,11 +18,11 @@ import org.springframework.boot.context.properties.EnableConfigurationProperties
  * The system prompt is applied per request in
  * {@link io.github.cokelee777.agent.host.invocation.InvocationController#invoke} so that
  * agent descriptions always reflect the latest loaded {@link io.a2a.spec.AgentCard
- * AgentCards}.
+ * AgentCards} (via
+ * {@link io.github.cokelee777.a2a.agent.common.autoconfigure.RemoteAgentCardRegistry}).
  * </p>
  */
 @SpringBootApplication
-@EnableConfigurationProperties(RemoteAgentProperties.class)
 public class HostAgentApplication {
 
 	/**
