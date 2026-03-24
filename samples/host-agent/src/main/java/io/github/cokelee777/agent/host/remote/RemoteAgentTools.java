@@ -60,7 +60,8 @@ public class RemoteAgentTools {
 	 * Runs one downstream delegation per virtual thread for
 	 * {@link #delegateToRemoteAgentsParallel} without tying up platform thread pools.
 	 */
-	private static final Executor VIRTUAL_THREAD_EXECUTOR = Executors.newVirtualThreadPerTaskExecutor();
+	private static final Executor VIRTUAL_THREAD_EXECUTOR = Executors
+		.newThreadPerTaskExecutor(Thread.ofVirtual().name("remote-agent-", 1).factory());
 
 	private final RemoteAgentCardRegistry remoteAgentCardRegistry;
 

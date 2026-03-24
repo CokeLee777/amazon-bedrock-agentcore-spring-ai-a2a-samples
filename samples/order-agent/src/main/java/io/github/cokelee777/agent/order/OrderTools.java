@@ -11,6 +11,9 @@ import org.springframework.ai.tool.annotation.ToolParam;
 import org.springframework.stereotype.Component;
 
 import java.util.Optional;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.Executor;
+import java.util.concurrent.Executors;
 import java.util.stream.Collectors;
 
 /**
@@ -31,6 +34,9 @@ public class OrderTools {
 	private static final String DELIVERY_OMIT_PREFIX = "[배송 조회 생략] ";
 
 	private static final String PAYMENT_OMIT_PREFIX = "[결제 조회 생략] ";
+
+	private static final Executor VIRTUAL_THREAD_EXECUTOR = Executors
+		.newThreadPerTaskExecutor(Thread.ofVirtual().name("order-agent-", 1).factory());
 
 	private final OrderRepository orderRepository;
 
@@ -71,8 +77,12 @@ public class OrderTools {
 		}
 		Order order = orderOpt.get();
 		String orderState = order.toCancellabilityStateLine();
-		String deliveryStatus = resolveDeliveryStatus(order);
-		String paymentStatus = resolvePaymentStatus(order);
+		CompletableFuture<String> deliveryFuture = CompletableFuture.supplyAsync(() -> resolveDeliveryStatus(order),
+				VIRTUAL_THREAD_EXECUTOR);
+		CompletableFuture<String> paymentFuture = CompletableFuture.supplyAsync(() -> resolvePaymentStatus(order),
+				VIRTUAL_THREAD_EXECUTOR);
+		String deliveryStatus = deliveryFuture.join();
+		String paymentStatus = paymentFuture.join();
 		return orderState + "\n" + deliveryStatus + "\n" + paymentStatus;
 	}
 
