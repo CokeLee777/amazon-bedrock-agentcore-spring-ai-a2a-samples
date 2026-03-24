@@ -41,7 +41,7 @@ public class PaymentAgentClient {
 		Assert.notNull(task, "task must not be null");
 
 		return lazyCard.get().map(card -> {
-			Message message = A2A.toUserMessage(task);
+			Message message = A2A.toAgentMessage(task);
 			return A2ATransport.send(card, message);
 		}).orElse("결제 에이전트에 연결할 수 없습니다.");
 	}
