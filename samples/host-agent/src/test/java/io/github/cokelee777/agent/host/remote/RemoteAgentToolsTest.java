@@ -22,15 +22,15 @@ class RemoteAgentToolsTest {
 	}
 
 	@Test
-	void sendMessagesParallel_null_rejectsWithIllegalArgument() {
-		assertThatThrownBy(() -> remoteAgentTools.sendMessagesParallel(null))
+	void delegateToRemoteAgentsParallel_null_rejectsWithIllegalArgument() {
+		assertThatThrownBy(() -> remoteAgentTools.delegateToRemoteAgentsParallel(null))
 			.isInstanceOf(IllegalArgumentException.class)
 			.hasMessageContaining("requests");
 	}
 
 	@Test
-	void sendMessagesParallel_empty_returnsEmptyAggregatedOutput() {
-		assertThat(remoteAgentTools.sendMessagesParallel(List.of())).isEmpty();
+	void delegateToRemoteAgentsParallel_empty_returnsEmptyAggregatedOutput() {
+		assertThat(remoteAgentTools.delegateToRemoteAgentsParallel(List.of())).isEmpty();
 	}
 
 }

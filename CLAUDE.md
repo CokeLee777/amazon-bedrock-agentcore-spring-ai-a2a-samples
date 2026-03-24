@@ -66,7 +66,7 @@ spring-ai-a2a/
 │   │   │   ├── DefaultInvocationService     # ChatMemoryRepository, actorId:sessionId 복합키
 │   │   │   └── InvocationRequest/Response, InvocationService
 │   │   ├── remote/                          # 다운스트림 A2A 연동
-│   │   │   ├── RemoteAgentTools             # @Tool sendMessage / sendMessagesParallel, RemoteAgentCardRegistry 주입
+│   │   │   ├── RemoteAgentTools             # @Tool delegateToRemoteAgent / delegateToRemoteAgentsParallel, RemoteAgentCardRegistry 주입
 │   │   │   └── RemoteAgentDelegationRequest # 툴 파라미터 record
 │   │   └── HostAgentApplication             # 부트스트랩
 │   ├── order-agent/  (port: 9001)           # 주문 조회 · 취소 가능 여부 확인 A2A 에이전트
@@ -112,9 +112,9 @@ spring-ai-a2a/
 ### RemoteAgentTools (`host-agent` → `remote`)
 
 - 패키지: `io.github.cokelee777.agent.host.remote`.
-- `@Tool` 메서드 `sendMessage(RemoteAgentDelegationRequest)` 로 단일 다운스트림 호출, 병렬 배치는 `sendMessagesParallel(List<RemoteAgentDelegationRequest>)`.
+- `@Tool` 메서드 `delegateToRemoteAgent(RemoteAgentDelegationRequest)` 로 단일 다운스트림 호출, 병렬 배치는 `delegateToRemoteAgentsParallel(List<RemoteAgentDelegationRequest>)`.
 - 각 파라미터에 `@ToolParam(description = "...")` 을 달아 LLM이 올바른 값을 추론하도록 돕는다.
-- `RemoteAgentCardRegistry`를 주입받는다. `sendMessage` / `sendMessagesParallel`은 `findCardByAgentName`으로 카드를 해소하고 `A2ATransport`로 전송한다. 알 수 없는 이름일 때는 `peekCachedAgentCards()` 기반으로 영문 한 줄 에러를 반환한다.
+- `RemoteAgentCardRegistry`를 주입받는다. `delegateToRemoteAgent` / `delegateToRemoteAgentsParallel`은 `findCardByAgentName`으로 카드를 해소하고 `A2ATransport`로 전송한다. 알 수 없는 이름일 때는 `peekCachedAgentCards()` 기반으로 영문 한 줄 에러를 반환한다.
 
 ### Invocation 경로 (`host-agent` → `invocation`)
 

@@ -59,8 +59,9 @@ public class LazyAgentCard {
 	 * <p>
 	 * If the card was not successfully loaded at construction time, this method attempts
 	 * to fetch it again on every call until it succeeds. Use this method when the caller
-	 * intends to actually communicate with the agent (e.g., inside {@code sendMessage}).
-	 * For read-only status checks use {@link #peek()} to avoid redundant network calls.
+	 * intends to actually communicate with the agent (e.g., inside
+	 * {@code delegateToRemoteAgent}). For read-only status checks use {@link #peek()} to
+	 * avoid redundant network calls.
 	 * </p>
 	 * @return an {@link Optional} containing the {@link AgentCard}, or empty if the agent
 	 * is still unreachable

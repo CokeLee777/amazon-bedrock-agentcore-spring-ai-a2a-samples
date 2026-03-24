@@ -5,8 +5,8 @@ import org.springframework.util.Assert;
 
 /**
  * Request to delegate work to one downstream agent. Used by
- * {@link RemoteAgentTools#sendMessage} and as list elements in
- * {@link RemoteAgentTools#sendMessagesParallel}.
+ * {@link RemoteAgentTools#delegateToRemoteAgent} and as list elements in
+ * {@link RemoteAgentTools#delegateToRemoteAgentsParallel}.
  *
  * @param agentName must equal the target agent's {@link io.a2a.spec.AgentCard#name()}
  * from its agent card (not the YAML config key)

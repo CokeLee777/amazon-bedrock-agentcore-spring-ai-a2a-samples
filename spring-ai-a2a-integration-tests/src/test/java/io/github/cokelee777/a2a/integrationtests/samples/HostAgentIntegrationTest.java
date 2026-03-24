@@ -105,17 +105,18 @@ class HostAgentIntegrationTest {
 			.orElse("");
 
 		assertThat(systemContent).contains("에이전트 라우터");
-		assertThat(systemContent).contains("sendMessage");
-		assertThat(systemContent).contains("sendMessagesParallel");
+		assertThat(systemContent).contains("delegateToRemoteAgent");
+		assertThat(systemContent).contains("delegateToRemoteAgentsParallel");
 	}
 
 	/**
-	 * Verifies {@link RemoteAgentTools#sendMessage} returns a formatted error when the
-	 * requested agent name is not found.
+	 * Verifies {@link RemoteAgentTools#delegateToRemoteAgent} returns a formatted error
+	 * when the requested agent name is not found.
 	 */
 	@Test
-	void sendMessage_unknownAgent_returnsErrorMessage() {
-		String result = remoteAgentTools.sendMessage(new RemoteAgentDelegationRequest("Unknown Agent", "some task"));
+	void delegateToRemoteAgent_unknownAgent_returnsErrorMessage() {
+		String result = remoteAgentTools
+			.delegateToRemoteAgent(new RemoteAgentDelegationRequest("Unknown Agent", "some task"));
 
 		assertThat(result).contains("Agent 'Unknown Agent' not found");
 		assertThat(result).contains("Available agents:");

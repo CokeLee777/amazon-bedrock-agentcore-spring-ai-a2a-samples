@@ -38,9 +38,10 @@ import java.util.stream.Collectors;
  * </p>
  *
  * <p>
- * Tool methods are synchronous from the model's perspective: {@link #sendMessage} blocks
- * until the downstream task completes; {@link #sendMessagesParallel} blocks until every
- * delegated call finishes (each runs on a virtual thread).
+ * Tool methods are synchronous from the model's perspective:
+ * {@link #delegateToRemoteAgent} blocks until the downstream task completes;
+ * {@link #delegateToRemoteAgentsParallel} blocks until every delegated call finishes
+ * (each runs on a virtual thread).
  * </p>
  *
  * <p>
@@ -56,8 +57,8 @@ import java.util.stream.Collectors;
 public class RemoteAgentTools {
 
 	/**
-	 * Runs one downstream delegation per virtual thread for {@link #sendMessagesParallel}
-	 * without tying up platform thread pools.
+	 * Runs one downstream delegation per virtual thread for
+	 * {@link #delegateToRemoteAgentsParallel} without tying up platform thread pools.
 	 */
 	private static final Executor VIRTUAL_THREAD_EXECUTOR = Executors.newVirtualThreadPerTaskExecutor();
 
@@ -77,7 +78,7 @@ public class RemoteAgentTools {
 	 * {@link #unknownAgentMessage(String)} if no card matches {@code agentName}
 	 */
 	@Tool(description = "한 원격 에이전트에 한 건의 작업만 위임합니다. 특정 전문 에이전트에게 맡길 때 사용하세요.")
-	public String sendMessage(@ToolParam(
+	public String delegateToRemoteAgent(@ToolParam(
 			description = "단일 위임 요청. 에이전트 이름(agentName)과 작업 설명(task)을 포함합니다.") RemoteAgentDelegationRequest request) {
 		Assert.notNull(request, "request must not be null");
 
@@ -109,30 +110,30 @@ public class RemoteAgentTools {
 	}
 
 	/**
-	 * Runs {@link #sendMessage} once per list element on
+	 * Runs {@link #delegateToRemoteAgent} once per list element on
 	 * {@link #VIRTUAL_THREAD_EXECUTOR}, waits for all to finish, then formats results in
 	 * the same order as {@code requests}.
 	 *
 	 * <p>
 	 * Do not use when outputs must be chained (one result feeds the next); use separate
-	 * model turns with {@link #sendMessage} instead. Empty {@code requests} yields an
-	 * empty string (after {@link String#trim()}).
+	 * model turns with {@link #delegateToRemoteAgent} instead. Empty {@code requests}
+	 * yields an empty string (after {@link String#trim()}).
 	 * </p>
 	 * @param requests ordered, non-null, no null elements
 	 * @return numbered blocks {@code [n] agent: ... / response: ...} joined with newlines
 	 */
 	@Tool(description = """
 			한 번의 호출로 서로 무관한 여러 위임을 병렬로 실행합니다. \
-			한 에이전트의 응답이 다른 에이전트 호출의 입력이 되거나 순서가 중요하면 사용하지 말고 sendMessage를 여러 번 호출하세요. \
+			한 에이전트의 응답이 다른 에이전트 호출의 입력이 되거나 순서가 중요하면 사용하지 말고 delegateToRemoteAgent를 여러 번 호출하세요. \
 			반환값은 요청 순서대로 번호가 붙은 응답 블록들의 집계 텍스트입니다.""")
-	public String sendMessagesParallel(@ToolParam(
+	public String delegateToRemoteAgentsParallel(@ToolParam(
 			description = "병렬 위임 요청. 에이전트 이름(agentName)과 작업 설명(task)을 포함합니다.") List<RemoteAgentDelegationRequest> requests) {
 		Assert.notNull(requests, "requests must not be null");
 		Assert.noNullElements(requests, "requests must contain non-null elements");
 
 		List<CompletableFuture<String>> futures = new ArrayList<>(requests.size());
 		for (RemoteAgentDelegationRequest request : requests) {
-			futures.add(CompletableFuture.supplyAsync(() -> sendMessage(request), VIRTUAL_THREAD_EXECUTOR));
+			futures.add(CompletableFuture.supplyAsync(() -> delegateToRemoteAgent(request), VIRTUAL_THREAD_EXECUTOR));
 		}
 		CompletableFuture.allOf(futures.toArray(CompletableFuture[]::new)).join();
 
