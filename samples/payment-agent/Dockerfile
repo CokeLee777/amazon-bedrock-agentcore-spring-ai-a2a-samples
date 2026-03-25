@@ -19,7 +19,7 @@ COPY . .
 
 RUN chmod +x gradlew \
 	&& ./gradlew :payment-agent:bootJar --no-daemon -x test \
-	&& cp samples/payment-agent/build/libs/payment-agent-*-SNAPSHOT.jar /app/app.jar
+	&& cp samples/payment-agent/build/libs/payment-agent-*.jar /app/app.jar
 
 # ---------- Runtime stage ----------
 FROM eclipse-temurin:25-jre-jammy

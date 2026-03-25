@@ -19,7 +19,7 @@ COPY . .
 
 RUN chmod +x gradlew \
 	&& ./gradlew :order-agent:bootJar --no-daemon -x test \
-	&& cp samples/order-agent/build/libs/order-agent-*-SNAPSHOT.jar /app/app.jar
+	&& cp samples/order-agent/build/libs/order-agent-*.jar /app/app.jar
 
 # ---------- Runtime stage ----------
 FROM eclipse-temurin:25-jre-jammy

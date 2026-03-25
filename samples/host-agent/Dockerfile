@@ -27,7 +27,7 @@ COPY . .
 
 RUN chmod +x gradlew \
 	&& ./gradlew :host-agent:bootJar --no-daemon -x test \
-	&& cp samples/host-agent/build/libs/host-agent-*-SNAPSHOT.jar /app/app.jar
+	&& cp samples/host-agent/build/libs/host-agent-*.jar /app/app.jar
 
 # ---------- Runtime stage (must be ARM64 for AgentCore) ----------
 FROM --platform=linux/arm64 eclipse-temurin:25-jre-jammy

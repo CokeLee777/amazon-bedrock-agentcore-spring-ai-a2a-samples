@@ -19,7 +19,7 @@ COPY . .
 
 RUN chmod +x gradlew \
 	&& ./gradlew :delivery-agent:bootJar --no-daemon -x test \
-	&& cp samples/delivery-agent/build/libs/delivery-agent-*-SNAPSHOT.jar /app/app.jar
+	&& cp samples/delivery-agent/build/libs/delivery-agent-*.jar /app/app.jar
 
 # ---------- Runtime stage ----------
 FROM eclipse-temurin:25-jre-jammy
