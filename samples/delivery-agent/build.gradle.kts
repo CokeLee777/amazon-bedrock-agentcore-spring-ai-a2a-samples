@@ -5,7 +5,3 @@ dependencies {
 	implementation("org.springframework.ai:spring-ai-starter-model-bedrock-converse")
 	implementation("org.springframework.ai:spring-ai-client-chat")
 }
-
-tasks.named<Jar>("jar") {
-	enabled = true
-}
