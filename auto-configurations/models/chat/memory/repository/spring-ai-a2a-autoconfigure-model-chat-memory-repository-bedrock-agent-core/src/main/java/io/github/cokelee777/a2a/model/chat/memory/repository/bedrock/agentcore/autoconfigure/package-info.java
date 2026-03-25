@@ -1,5 +1,5 @@
 /**
- * Spring Boot auto-configuration for the Bedrock AgentCore Chat Memory Repository.
+ * Spring Boot autoconfiguration for the Bedrock AgentCore Chat Memory Repository.
  *
  * <p>
  * Registers

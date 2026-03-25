@@ -66,7 +66,7 @@ public class A2AServerAutoConfiguration {
 	}
 
 	/**
-	 * Logs that a bean is being auto-configured. Use at the start of each {@code @Bean}
+	 * Logs that a bean is being autoconfigured. Use at the start of each {@code @Bean}
 	 * method that registers a default implementation.
 	 * @param component short name of the component (e.g. "InMemoryTaskStore")
 	 * @param purpose one-line purpose (e.g. "task management")
@@ -150,8 +150,8 @@ public class A2AServerAutoConfiguration {
 	 *
 	 * <p>
 	 * The SDK's defaults include both blocking timeouts ({@code a2a.blocking.*}) and
-	 * thread-pool settings ({@code a2a.executor.*}). When this auto-configuration
-	 * provides {@link #a2aTaskExecutor()}, the executor-related keys
+	 * thread-pool settings ({@code a2a.executor.*}). When this autoconfiguration provides
+	 * {@link #a2aTaskExecutor()}, the executor-related keys
 	 * ({@code a2a.executor.core-pool-size}, {@code max-pool-size}, etc.) are <strong>not
 	 * used</strong>—they apply only when the SDK creates its own executor (e.g.
 	 * AsyncExecutorProducer). Blocking timeouts and any other keys are still read by the

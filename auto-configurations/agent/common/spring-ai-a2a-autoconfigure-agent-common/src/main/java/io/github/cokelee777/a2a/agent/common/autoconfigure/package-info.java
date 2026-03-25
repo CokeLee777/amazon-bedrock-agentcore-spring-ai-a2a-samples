@@ -1,5 +1,5 @@
 /**
- * Spring Boot auto-configuration for spring-ai-a2a-agent-common shared components.
+ * Spring Boot autoconfiguration for spring-ai-a2a-agent-common shared components.
  *
  * <p>
  * Registers {@link io.github.cokelee777.a2a.agent.common.autoconfigure.PingController},

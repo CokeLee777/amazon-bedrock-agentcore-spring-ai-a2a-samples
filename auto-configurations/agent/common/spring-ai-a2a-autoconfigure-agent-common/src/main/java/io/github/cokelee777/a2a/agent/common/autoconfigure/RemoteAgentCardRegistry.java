@@ -113,7 +113,7 @@ public class RemoteAgentCardRegistry {
 	 * Resolves which {@link AgentCard} instances to include when building
 	 * {@link #getAgentDescriptions()}.
 	 * @return {@link #peekCachedAgentCards()} when non-empty; otherwise the result of
-	 * calling {@link LazyAgentCard#get()} on every registered lazy card (may be a subset
+	 * calling {@link LazyAgentCard#get()} on every registered lazy card (maybe a subset
 	 * if some agents remain unreachable)
 	 */
 	private List<AgentCard> resolveAgentCardsForDescriptions() {

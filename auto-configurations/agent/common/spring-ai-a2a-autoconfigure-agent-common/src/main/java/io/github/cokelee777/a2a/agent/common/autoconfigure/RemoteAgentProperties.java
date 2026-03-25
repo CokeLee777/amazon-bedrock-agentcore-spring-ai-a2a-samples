@@ -3,7 +3,6 @@ package io.github.cokelee777.a2a.agent.common.autoconfigure;
 import jakarta.validation.constraints.NotNull;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.boot.context.properties.bind.DefaultValue;
-import org.springframework.util.Assert;
 import org.springframework.validation.annotation.Validated;
 
 import java.util.Map;

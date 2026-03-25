@@ -10,13 +10,13 @@ spring:
         chat:
           options:
             model: ${BEDROCK_MODEL_ID:}
-    chat:
-      memory:
-        repository:
-          bedrock:
-            agent-core:
-              memory-id: ${BEDROCK_MEMORY_ID:}
-              max-turns: 10
+#    chat:
+#      memory:
+#        repository:
+#          bedrock:
+#            agent-core:
+#              memory-id: ${BEDROCK_MEMORY_ID:}
+#              max-turns: 10
 
 a2a:
   remote:

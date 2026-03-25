@@ -6,7 +6,7 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Import;
 
 /**
- * Auto-configuration for spring-ai-a2a-agent-common shared components.
+ * Autoconfiguration for spring-ai-a2a-agent-common shared components.
  *
  * <p>
  * Registers {@link PingController}, {@link RemoteAgentProperties} binding for

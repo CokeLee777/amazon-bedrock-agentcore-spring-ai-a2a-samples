@@ -13,7 +13,7 @@ import java.util.Optional;
  * Spring Environment based A2A configuration provider. It first checks the Spring
  * Environment for the property. If not found, it falls back to
  * DefaultValuesConfigProvider.
- *
+ * <p>
  * This allows overriding default A2A server properties using standard Spring Environment
  * properties.
  *

@@ -33,7 +33,7 @@ import static org.mockito.Mockito.when;
  * <p>
  * Starts the full Host Agent Spring Boot application with a mocked {@link ChatModel},
  * then verifies the {@code POST /invocations} endpoint, dynamic system prompt generation,
- * and {@link RemoteAgentTools} routing behaviour.
+ * and {@link RemoteAgentTools} routing behavior.
  * </p>
  */
 @SpringBootTest(classes = HostAgentApplication.class, webEnvironment = SpringBootTest.WebEnvironment.DEFINED_PORT,
