@@ -35,3 +35,15 @@ project(":payment-agent").projectDir = file("samples/payment-agent")
 include("spring-ai-a2a-agent-common")
 include("spring-ai-a2a-integration-tests")
 include("spring-ai-a2a-server")
+
+include("spring-ai-a2a-starter-agent-common")
+project(":spring-ai-a2a-starter-agent-common")
+	.projectDir = file("spring-ai-a2a-starters/spring-ai-a2a-starter-agent-common")
+
+include("spring-ai-a2a-starter-server")
+project(":spring-ai-a2a-starter-server")
+	.projectDir = file("spring-ai-a2a-starters/spring-ai-a2a-starter-server")
+
+include("spring-ai-a2a-starter-model-chat-memory-repository-bedrock-agent-core")
+project(":spring-ai-a2a-starter-model-chat-memory-repository-bedrock-agent-core")
+	.projectDir = file("spring-ai-a2a-starters/spring-ai-a2a-starter-model-chat-memory-repository-bedrock-agent-core")

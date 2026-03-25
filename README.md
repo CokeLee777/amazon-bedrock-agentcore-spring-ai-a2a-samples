@@ -36,6 +36,18 @@ A2A 클라이언트 측 공유 유틸리티입니다.
 | `spring-ai-a2a-autoconfigure-server` | `ChatClient` 클래스가 클래스패스에 존재 | A2A 서버 인프라 자동 구성 (Virtual thread Executor, TaskStore, RequestHandler 등) |
 | `spring-ai-a2a-autoconfigure-model-chat-memory-repository-bedrock-agent-core` | `memory-id` 프로퍼티 설정 시 | `BedrockChatMemoryRepository` 등록. 미설정 시 Spring AI `InMemoryChatMemoryRepository` 폴백 |
 
+### Starter 모듈 (`spring-ai-a2a-starters/`)
+
+여러 라이브러리 JAR을 **한 Gradle/Maven 의존성**으로 묶기 위한 모듈입니다. `java-library`와 `api` 전이를 사용해, 소비 앱이 하위 모듈의 타입을 컴파일 시점에 그대로 참조할 수 있습니다.
+
+| Starter | 포함 모듈 | 이 레포 `samples/` |
+|---------|-----------|---------------------|
+| `spring-ai-a2a-starter-agent-common` | `spring-ai-a2a-agent-common`, `spring-ai-a2a-autoconfigure-agent-common` | 모든 샘플 |
+| `spring-ai-a2a-starter-server` | `spring-ai-a2a-server`, `spring-ai-a2a-autoconfigure-server` | `order-agent`, `delivery-agent`, `payment-agent` |
+| `spring-ai-a2a-starter-model-chat-memory-repository-bedrock-agent-core` | `spring-ai-a2a-model-chat-memory-repository-bedrock-agent-core`, `spring-ai-a2a-autoconfigure-model-chat-memory-repository-bedrock-agent-core` | `host-agent` |
+
+일부 조합만 필요하면 위 표의 **포함 모듈**을 개별 `implementation`으로 나누어 선언해도 됩니다.
+
 ### Memory 구현체
 
 현재 Amazon Bedrock AgentCore 기반 구현체가 제공됩니다.

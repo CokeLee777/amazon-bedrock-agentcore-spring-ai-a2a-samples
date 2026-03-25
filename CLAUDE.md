@@ -58,8 +58,12 @@ spring-ai-a2a/
 │       ├── BedrockChatMemoryRepository      # ChatMemoryRepository 구현체 (append, conversationId="actorId:sessionId")
 │       ├── AgentCoreEventToMessageConverter # AgentCore Event → Spring AI Message 변환
 │       └── BedrockChatMemoryRepositoryConfig  # memoryId, maxTurns 설정 빈
+├── spring-ai-a2a-starters/                  # 의존성 묶음용 starter (java-library, api 전이)
+│   ├── spring-ai-a2a-starter-agent-common/       # agent-common + autoconfigure-agent-common
+│   ├── spring-ai-a2a-starter-server/             # server + autoconfigure-server
+│   └── spring-ai-a2a-starter-model-chat-memory-repository-bedrock-agent-core/  # Bedrock memory impl + autoconfigure
 ├── samples/
-│   ├── host-agent/   (port: 8080)           # AgentCore Runtime 진입점 · 오케스트레이터
+│   ├── host-agent/   (port: 8080)           # AgentCore Runtime 진입점 · 오케스트레이터 (starter-agent-common + starter-model-chat-memory-repository-bedrock-agent-core)
 │   │   ├── invocation/                      # POST /invocations, 오케스트레이션
 │   │   │   ├── InvocationController         # REST 엔드포인트
 │   │   │   ├── InvocationConfiguration      # orchestrator ChatClient @Bean (defaultTools + advisors)
@@ -69,14 +73,14 @@ spring-ai-a2a/
 │   │   │   ├── RemoteAgentTools             # @Tool delegateToRemoteAgent / delegateToRemoteAgentsParallel, RemoteAgentCardRegistry 주입
 │   │   │   └── RemoteAgentDelegationRequest # 툴 파라미터 record
 │   │   └── HostAgentApplication             # 부트스트랩
-│   ├── order-agent/  (port: 9001)           # 주문 조회 · 취소 가능 여부 확인 A2A 에이전트
+│   ├── order-agent/  (port: 9001)           # 주문 조회 · 취소 가능 여부 확인 A2A 에이전트 (starter-agent-common + starter-server)
 │   │   ├── OrderTools                       # getOrderList, checkOrderCancellability
 │   │   ├── DeliveryAgentClient              # delivery-agent 호출 클라이언트 (LazyAgentCard)
 │   │   ├── PaymentAgentClient               # payment-agent 호출 클라이언트 (LazyAgentCard)
 │   │   └── OrderAgentConfiguration          # A2A 서버 빈; 다운스트림 URL은 a2a.remote.agents (autoconfigure)
-│   ├── delivery-agent/ (port: 9002)         # 배송 추적 A2A 에이전트
+│   ├── delivery-agent/ (port: 9002)         # 배송 추적 A2A 에이전트 (starter-agent-common + starter-server)
 │   │   └── DeliveryTools                    # trackDelivery
-│   └── payment-agent/ (port: 9003)          # 결제/환불 상태 확인 A2A 에이전트
+│   └── payment-agent/ (port: 9003)          # 결제/환불 상태 확인 A2A 에이전트 (starter-agent-common + starter-server)
 │       └── PaymentTools                     # getPaymentStatus
 └── spring-ai-a2a-integration-tests/         # 전체 에이전트 통합 테스트 (jar 미생성)
     ├── HostAgentIntegrationTest
@@ -86,6 +90,14 @@ spring-ai-a2a/
 ```
 
 ## 핵심 설계 결정 사항
+
+### Starter 모듈 (`spring-ai-a2a-starters`)
+
+- Gradle 서브프로젝트로 **구현·autoconfigure JAR를 한 의존성으로 묶는** 용도다. `java-library` 플러그인과 `api(project(...))`로 하위 모듈을 선언해, 소비 앱이 예전처럼 각 JAR의 타입을 컴파일 클래스패스에서 쓸 수 있게 전이한다.
+- 소스는 없어도 되며(빈 JAR), 샘플은 아래 조합을 사용한다.
+  - **A2A 다운스트림 에이전트** (`order-agent`, `delivery-agent`, `payment-agent`): `spring-ai-a2a-starter-agent-common` + `spring-ai-a2a-starter-server`
+  - **host-agent**: `spring-ai-a2a-starter-agent-common` + `spring-ai-a2a-starter-model-chat-memory-repository-bedrock-agent-core`
+- 외부 프로젝트는 동일 starter 좌표를 쓰거나, 필요 시 개별 모듈만 골라 `implementation`할 수 있다.
 
 ### A2ATransport
 
