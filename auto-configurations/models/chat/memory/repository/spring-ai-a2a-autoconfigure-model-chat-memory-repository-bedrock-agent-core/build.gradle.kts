@@ -2,6 +2,7 @@ dependencies {
 	implementation(project(":spring-ai-a2a-model-chat-memory-repository-bedrock-agent-core"))
 	implementation("org.springframework.ai:spring-ai-client-chat")
 	implementation("org.springframework.ai:spring-ai-autoconfigure-model-chat-memory")
+	implementation("org.springframework.ai:spring-ai-autoconfigure-model-bedrock-ai")
 	implementation("org.springframework.boot:spring-boot-autoconfigure")
 	implementation("org.springframework.boot:spring-boot-starter-validation")
 	implementation("org.springframework.boot:spring-boot-configuration-processor")

@@ -26,8 +26,9 @@ public class InvocationController {
 	/**
 	 * Handles invocation requests from Amazon Bedrock AgentCore Runtime.
 	 * @param request the invocation request containing the user prompt and optional
-	 * session identifiers
-	 * @return the invocation response including assistant content and session identifiers
+	 * {@code conversationId}
+	 * @return the invocation response including assistant content and
+	 * {@code conversationId}
 	 */
 	@PostMapping(path = "/invocations")
 	public InvocationResponse invoke(@Valid @RequestBody InvocationRequest request) {

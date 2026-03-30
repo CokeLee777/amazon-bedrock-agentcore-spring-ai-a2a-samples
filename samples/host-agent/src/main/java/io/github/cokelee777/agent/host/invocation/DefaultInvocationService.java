@@ -3,17 +3,17 @@ package io.github.cokelee777.agent.host.invocation;
 import io.github.cokelee777.a2a.agent.common.autoconfigure.RemoteAgentCardRegistry;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.jspecify.annotations.Nullable;
 import org.springframework.ai.chat.client.ChatClient;
 import org.springframework.ai.chat.memory.ChatMemoryRepository;
 import org.springframework.ai.chat.messages.AssistantMessage;
 import org.springframework.ai.chat.messages.Message;
 import org.springframework.ai.chat.messages.UserMessage;
 import org.springframework.stereotype.Service;
+import org.springframework.util.Assert;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
-import java.util.UUID;
 
 /**
  * Default implementation of {@link InvocationService}.
@@ -21,20 +21,21 @@ import java.util.UUID;
  * <p>
  * Execution order per request:
  * <ol>
- * <li>Resolve {@code actorId}/{@code sessionId} (generate UUID if absent).</li>
- * <li>Compose {@code conversationId} as {@code "actorId:sessionId"}.</li>
+ * <li>Use {@link InvocationRequest#conversationId()} as {@link ChatMemoryRepository}
+ * {@code conversationId} (UUID assigned in the request record when omitted).</li>
  * <li>Load history from {@link ChatMemoryRepository}.</li>
  * <li>Call the LLM via {@link ChatClient} (system prompt includes downstream agents from
  * {@link RemoteAgentCardRegistry#getAgentDescriptions()}).</li>
- * <li>Persist the new USER and ASSISTANT messages <em>after</em> the LLM call succeeds,
- * ensuring a failed call leaves no orphaned events.</li>
+ * <li>Persist full message list (prior history plus new user and assistant turns)
+ * <em>after</em> the LLM call succeeds, matching replace-style repositories such as
+ * {@code BedrockAgentCoreChatMemoryRepository}.</li>
  * </ol>
  * </p>
  *
  * <p>
- * <strong>saveAll semantics:</strong> only the two new messages are passed to
- * {@link ChatMemoryRepository#saveAll}, consistent with append-based repositories such as
- * {@code JdbcChatMemoryRepository}.
+ * <strong>saveAll semantics:</strong> passes the complete conversation (existing history
+ * plus the new user prompt and assistant reply) so implementations that replace events
+ * per call behave correctly.
  * </p>
  */
 @Slf4j
@@ -73,10 +74,10 @@ public class DefaultInvocationService implements InvocationService {
 
 	@Override
 	public InvocationResponse invoke(InvocationRequest request) {
-		String actorId = resolveId(request.actorId());
-		String sessionId = resolveId(request.sessionId());
-		String conversationId = actorId + ":" + sessionId;
+		Assert.notNull(request, "request must not be null");
+
 		String prompt = request.prompt();
+		String conversationId = request.conversationId();
 
 		List<Message> history = chatMemoryRepository.findByConversationId(conversationId);
 
@@ -88,13 +89,12 @@ public class DefaultInvocationService implements InvocationService {
 			.content();
 		String content = Objects.requireNonNullElse(response, "");
 
-		chatMemoryRepository.saveAll(conversationId, List.of(new UserMessage(prompt), new AssistantMessage(content)));
+		List<Message> toSave = new ArrayList<>(history);
+		toSave.add(new UserMessage(prompt));
+		toSave.add(new AssistantMessage(content));
+		chatMemoryRepository.saveAll(conversationId, toSave);
 
-		return new InvocationResponse(content, sessionId, actorId);
-	}
-
-	private String resolveId(@Nullable String id) {
-		return Objects.requireNonNullElse(id, UUID.randomUUID().toString());
+		return new InvocationResponse(content, conversationId);
 	}
 
 }

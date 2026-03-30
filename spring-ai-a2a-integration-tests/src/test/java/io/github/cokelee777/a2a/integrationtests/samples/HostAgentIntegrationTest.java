@@ -58,8 +58,8 @@ class HostAgentIntegrationTest {
 	}
 
 	/**
-	 * Verifies {@code POST /invocations} returns JSON with assistant content and session
-	 * identifiers.
+	 * Verifies {@code POST /invocations} returns JSON with assistant content and
+	 * {@code conversationId}.
 	 */
 	@Test
 	void invoke_returnsLlmResponse() {
@@ -73,9 +73,8 @@ class HostAgentIntegrationTest {
 			});
 
 		assertThat(response).containsEntry("content", MOCK_RESPONSE);
-		assertThat(response).containsKeys("sessionId", "actorId");
-		assertThat(response.get("sessionId")).isNotBlank();
-		assertThat(response.get("actorId")).isNotBlank();
+		assertThat(response).containsKey("conversationId");
+		assertThat(response.get("conversationId")).isNotBlank();
 	}
 
 	/**

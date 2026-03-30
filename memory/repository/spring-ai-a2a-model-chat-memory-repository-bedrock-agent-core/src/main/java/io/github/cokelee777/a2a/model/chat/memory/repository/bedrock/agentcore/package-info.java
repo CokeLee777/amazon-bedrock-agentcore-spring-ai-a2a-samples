@@ -3,10 +3,9 @@
  *
  * <p>
  * Provides
- * {@link io.github.cokelee777.a2a.model.chat.memory.repository.bedrock.agentcore.BedrockChatMemoryRepository},
- * which persists conversation turns via the Bedrock AgentCore Memory API using
- * {@code listEvents} / {@code createEvent}. The {@code conversationId} is a composite key
- * of the form {@code "actorId:sessionId"}.
+ * {@link io.github.cokelee777.a2a.model.chat.memory.repository.bedrock.agentcore.BedrockAgentCoreChatMemoryRepository},
+ * which maps {@code conversationId} to Bedrock {@code sessionId} and uses the configured
+ * {@code actorId} for Memory API calls (events and long-term memory records).
  * </p>
  */
 @NullMarked

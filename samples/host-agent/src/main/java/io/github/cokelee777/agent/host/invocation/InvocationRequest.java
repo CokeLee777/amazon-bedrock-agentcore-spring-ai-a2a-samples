@@ -3,19 +3,28 @@ package io.github.cokelee777.agent.host.invocation;
 import jakarta.validation.constraints.NotBlank;
 import org.jspecify.annotations.Nullable;
 
+import java.util.Objects;
+import java.util.UUID;
+
 /**
  * Request payload for {@code POST /invocations}.
  *
  * <p>
- * {@code actorId} and {@code sessionId} are optional — omit them on the first message and
- * the service generates them, returning the values in {@link InvocationResponse}.
+ * {@code conversationId} is optional in JSON — omit it on the first message and a UUID is
+ * assigned in the compact constructor; echo the
+ * {@link InvocationResponse#conversationId()} on later requests to continue the same chat
+ * memory thread.
  * </p>
  *
  * @param prompt the user message; must not be blank
- * @param actorId the actor identifier; {@code null} on first message
- * @param sessionId the session identifier; {@code null} on first message
+ * @param conversationId the chat memory conversation id; {@code null} or omitted to
+ * generate a UUID
  */
-public record InvocationRequest(@NotBlank(message = "prompt must not be blank") String prompt, @Nullable String actorId,
-		@Nullable String sessionId) {
+public record InvocationRequest(@NotBlank(message = "prompt must not be blank") String prompt,
+		@Nullable String conversationId) {
+
+	public InvocationRequest {
+		conversationId = Objects.requireNonNullElse(conversationId, UUID.randomUUID().toString());
+	}
 
 }

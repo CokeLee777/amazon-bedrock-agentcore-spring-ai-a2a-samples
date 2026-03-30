@@ -50,13 +50,31 @@ class DefaultInvocationServiceTest {
 		setupChatClientChain("ok");
 		when(remoteAgentCardRegistry.getAgentDescriptions()).thenReturn("");
 
-		service().invoke(new InvocationRequest("hi", "actor-1", "session-1"));
+		service().invoke(new InvocationRequest("hi", "session-1"));
 
 		InOrder order = inOrder(chatClient, chatMemoryRepository);
 		order.verify(chatClient).prompt();
 		@SuppressWarnings("unchecked")
 		ArgumentCaptor<List<Message>> captor = ArgumentCaptor.forClass(List.class);
-		order.verify(chatMemoryRepository).saveAll(eq("actor-1:session-1"), captor.capture());
+		order.verify(chatMemoryRepository).saveAll(eq("session-1"), captor.capture());
+		List<Message> saved = captor.getValue();
+		assertThat(saved).hasSize(3);
+		assertThat(saved.get(0).getText()).isEqualTo("prev");
+		assertThat(saved.get(1)).isInstanceOf(UserMessage.class);
+		assertThat(saved.get(2)).isInstanceOf(AssistantMessage.class);
+	}
+
+	@Test
+	void invoke_withNoHistory_savesUserAndAssistantOnly() {
+		when(chatMemoryRepository.findByConversationId(anyString())).thenReturn(List.of());
+		setupChatClientChain("reply");
+		when(remoteAgentCardRegistry.getAgentDescriptions()).thenReturn("");
+
+		service().invoke(new InvocationRequest("hello", "s"));
+
+		@SuppressWarnings("unchecked")
+		ArgumentCaptor<List<Message>> captor = ArgumentCaptor.forClass(List.class);
+		verify(chatMemoryRepository).saveAll(anyString(), captor.capture());
 		List<Message> saved = captor.getValue();
 		assertThat(saved).hasSize(2);
 		assertThat(saved.get(0)).isInstanceOf(UserMessage.class);
@@ -64,53 +82,36 @@ class DefaultInvocationServiceTest {
 	}
 
 	@Test
-	void invoke_savesOnlyTwoNewMessages() {
-		when(chatMemoryRepository.findByConversationId(anyString())).thenReturn(List.of());
-		setupChatClientChain("reply");
-		when(remoteAgentCardRegistry.getAgentDescriptions()).thenReturn("");
-
-		service().invoke(new InvocationRequest("hello", "a", "s"));
-
-		@SuppressWarnings("unchecked")
-		ArgumentCaptor<List<Message>> captor = ArgumentCaptor.forClass(List.class);
-		verify(chatMemoryRepository).saveAll(anyString(), captor.capture());
-		assertThat(captor.getValue()).hasSize(2);
-	}
-
-	@Test
-	void invoke_nullActorId_generatesUuid() {
+	void invoke_nullConversationId_generatesUuid() {
 		when(chatMemoryRepository.findByConversationId(anyString())).thenReturn(List.of());
 		setupChatClientChain("hi");
 		when(remoteAgentCardRegistry.getAgentDescriptions()).thenReturn("");
 
-		InvocationResponse response = service().invoke(new InvocationRequest("hello", null, null));
+		InvocationResponse response = service().invoke(new InvocationRequest("hello", null));
 
-		assertThat(response.actorId()).isNotBlank();
-		assertThat(response.sessionId()).isNotBlank();
+		assertThat(response.conversationId()).isNotBlank();
 	}
 
 	@Test
-	void invoke_providedIds_returnsSameIds() {
+	void invoke_providedConversationId_returnsSameId() {
 		when(chatMemoryRepository.findByConversationId(anyString())).thenReturn(List.of());
 		setupChatClientChain("reply");
 		when(remoteAgentCardRegistry.getAgentDescriptions()).thenReturn("");
 
-		InvocationResponse response = service().invoke(new InvocationRequest("hi", "actor-1", "sess-42"));
+		InvocationResponse response = service().invoke(new InvocationRequest("hi", "sess-42"));
 
-		assertThat(response.actorId()).isEqualTo("actor-1");
-		assertThat(response.sessionId()).isEqualTo("sess-42");
+		assertThat(response.conversationId()).isEqualTo("sess-42");
 	}
 
 	@Test
-	void invoke_alwaysReturnsNonNullIds() {
+	void invoke_alwaysReturnsNonNullConversationId() {
 		when(chatMemoryRepository.findByConversationId(anyString())).thenReturn(List.of());
 		setupChatClientChain("hi");
 		when(remoteAgentCardRegistry.getAgentDescriptions()).thenReturn("");
 
-		InvocationResponse response = service().invoke(new InvocationRequest("hello", null, null));
+		InvocationResponse response = service().invoke(new InvocationRequest("hello", null));
 
-		assertThat(response.sessionId()).isNotNull();
-		assertThat(response.actorId()).isNotNull();
+		assertThat(response.conversationId()).isNotNull();
 	}
 
 	@Test
@@ -123,7 +124,7 @@ class DefaultInvocationServiceTest {
 		when(requestSpec.user(anyString())).thenReturn(requestSpec);
 		when(requestSpec.call()).thenThrow(new RuntimeException("LLM error"));
 
-		assertThatThrownBy(() -> service().invoke(new InvocationRequest("hi", "actor-1", "session-1")))
+		assertThatThrownBy(() -> service().invoke(new InvocationRequest("hi", "session-1")))
 			.isInstanceOf(RuntimeException.class);
 
 		verify(chatMemoryRepository, never()).saveAll(anyString(), any());

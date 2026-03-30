@@ -1,19 +1,21 @@
 package io.github.cokelee777.agent.host.invocation;
 
 /**
- * Orchestrates a single {@code POST /invocations} request.
+ * Orchestrates a single user turn against the host
+ * {@link org.springframework.ai.chat.client.ChatClient}.
  *
  * <p>
- * Resolves or generates {@code actorId} and {@code sessionId}, loads memory context,
- * invokes the LLM, and persists the turn.
+ * Resolves {@code conversationId} (generating one when absent via
+ * {@link InvocationRequest}), loads memory context, runs the model, and persists the
+ * updated transcript.
  * </p>
  */
 public interface InvocationService {
 
 	/**
-	 * Processes one invocation. Generates {@code actorId}/{@code sessionId} if absent.
-	 * @param request the invocation request
-	 * @return the response including LLM output and resolved identifiers
+	 * Processes one invocation.
+	 * @param request the prompt and optional conversation id
+	 * @return assistant text and the effective conversation id
 	 */
 	InvocationResponse invoke(InvocationRequest request);
 

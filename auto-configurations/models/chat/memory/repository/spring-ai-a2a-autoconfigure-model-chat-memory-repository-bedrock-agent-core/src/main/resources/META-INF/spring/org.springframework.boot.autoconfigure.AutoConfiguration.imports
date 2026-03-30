@@ -1,1 +1,1 @@
-io.github.cokelee777.a2a.model.chat.memory.repository.bedrock.agentcore.autoconfigure.BedrockChatMemoryAutoConfiguration
+io.github.cokelee777.a2a.model.chat.memory.repository.bedrock.agentcore.autoconfigure.BedrockAgentCoreChatMemoryRepositoryAutoConfiguration
