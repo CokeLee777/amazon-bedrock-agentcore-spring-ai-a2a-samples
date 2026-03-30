@@ -6,6 +6,7 @@ import java.util.List;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import software.amazon.awssdk.core.pagination.sync.SdkIterable;
@@ -145,9 +146,41 @@ class BedrockAgentCoreChatMemoryRepositoryTests {
 		List<Message> result = this.repository.findByConversationId("conv-1");
 
 		assertThat(result).hasSize(2);
+		ArgumentCaptor<ListEventsRequest> listCaptor = ArgumentCaptor.forClass(ListEventsRequest.class);
+		verify(this.client, times(2)).listEventsPaginator(listCaptor.capture());
+		assertThat(listCaptor.getAllValues())
+			.allMatch(r -> BedrockAgentCoreChatMemoryConfig.DEFAULT_ACTOR_ID.equals(r.actorId()));
 		assertThat(result.get(0).getText()).isEqualTo("Hello");
 		assertThat(result.get(1).getText()).isEqualTo("Hi there");
 		verify(this.client, times(2)).createEvent(any(CreateEventRequest.class));
+	}
+
+	@Test
+	void findByConversationIdWithActorIdUsesActorInListEventsRequest() {
+		ListEventsIterable emptyPage = mockEventsPaginator(List.of());
+		when(this.client.listEventsPaginator(any(ListEventsRequest.class))).thenReturn(emptyPage);
+
+		this.repository.findByConversationId("actor-z", "conv-9");
+
+		ArgumentCaptor<ListEventsRequest> captor = ArgumentCaptor.forClass(ListEventsRequest.class);
+		verify(this.client).listEventsPaginator(captor.capture());
+		assertThat(captor.getValue().actorId()).isEqualTo("actor-z");
+		assertThat(captor.getValue().sessionId()).isEqualTo("conv-9");
+	}
+
+	@Test
+	void saveAllWithActorIdUsesActorInCreateEvent() {
+		UserMessage userMsg = UserMessage.builder().text("Hi").build();
+		ListEventsIterable emptyPage = mockEventsPaginator(List.of());
+		when(this.client.listEventsPaginator(any(ListEventsRequest.class))).thenReturn(emptyPage);
+		when(this.client.createEvent(any(CreateEventRequest.class))).thenReturn(CreateEventResponse.builder().build());
+
+		this.repository.saveAll("actor-x", "conv-7", List.of(userMsg));
+
+		ArgumentCaptor<CreateEventRequest> captor = ArgumentCaptor.forClass(CreateEventRequest.class);
+		verify(this.client).createEvent(captor.capture());
+		assertThat(captor.getValue().actorId()).isEqualTo("actor-x");
+		assertThat(captor.getValue().sessionId()).isEqualTo("conv-7");
 	}
 
 	@Test
@@ -176,6 +209,20 @@ class BedrockAgentCoreChatMemoryRepositoryTests {
 		this.repository.deleteByConversationId("conv-1");
 
 		verify(this.client, times(2)).deleteEvent(any(DeleteEventRequest.class));
+	}
+
+	@Test
+	void deleteByConversationIdWithActorIdUsesActorInDeleteEvent() {
+		Event event1 = Event.builder().eventId("evt-1").sessionId("conv-1").build();
+		ListEventsIterable page = mockEventsPaginator(List.of(event1));
+		when(this.client.listEventsPaginator(any(ListEventsRequest.class))).thenReturn(page);
+		when(this.client.deleteEvent(any(DeleteEventRequest.class))).thenReturn(DeleteEventResponse.builder().build());
+
+		this.repository.deleteByConversationId("actor-y", "conv-1");
+
+		ArgumentCaptor<DeleteEventRequest> captor = ArgumentCaptor.forClass(DeleteEventRequest.class);
+		verify(this.client).deleteEvent(captor.capture());
+		assertThat(captor.getValue().actorId()).isEqualTo("actor-y");
 	}
 
 	@Test
@@ -311,7 +358,27 @@ class BedrockAgentCoreChatMemoryRepositoryTests {
 		List<String> ids = this.repository.findConversationIds();
 
 		assertThat(ids).containsExactly("conv-1", "conv-2");
-		verify(this.client).listSessionsPaginator(any(ListSessionsRequest.class));
+		ArgumentCaptor<ListSessionsRequest> captor = ArgumentCaptor.forClass(ListSessionsRequest.class);
+		verify(this.client).listSessionsPaginator(captor.capture());
+		assertThat(captor.getValue().actorId()).isEqualTo(BedrockAgentCoreChatMemoryConfig.DEFAULT_ACTOR_ID);
+	}
+
+	@Test
+	void findConversationIdsWithActorIdUsesActorInRequest() {
+		ListSessionsIterable paginator = mockSessionsPaginator(List.of());
+		when(this.client.listSessionsPaginator(any(ListSessionsRequest.class))).thenReturn(paginator);
+
+		this.repository.findConversationIds("user-42");
+
+		ArgumentCaptor<ListSessionsRequest> captor = ArgumentCaptor.forClass(ListSessionsRequest.class);
+		verify(this.client).listSessionsPaginator(captor.capture());
+		assertThat(captor.getValue().actorId()).isEqualTo("user-42");
+	}
+
+	@Test
+	void findConversationIdsWithActorIdRejectsBlankActorId() {
+		assertThatThrownBy(() -> this.repository.findConversationIds("")).isInstanceOf(IllegalArgumentException.class)
+			.hasMessageContaining("actorId");
 	}
 
 	@Test
@@ -324,40 +391,31 @@ class BedrockAgentCoreChatMemoryRepositoryTests {
 		assertThat(ids).isEmpty();
 	}
 
-	/**
-	 * List-backed {@link SdkIterable} for paginator stubs (same role as PR’s
-	 * {@code SdkIterable} wiring).
-	 */
-	private static <T> SdkIterable<T> sdkIterableFromList(List<T> items) {
-		return new SdkIterable<>() {
-			@Override
-			public Iterator<T> iterator() {
-				return items.iterator();
-			}
-		};
-	}
-
 	private ListSessionsIterable mockSessionsPaginator(List<SessionSummary> sessions) {
 		ListSessionsIterable paginator = mock(ListSessionsIterable.class);
-		when(paginator.sessionSummaries()).thenReturn(sdkIterableFromList(sessions));
+		SdkIterable<SessionSummary> sdkSessions = sessions::iterator;
+		when(paginator.sessionSummaries()).thenReturn(sdkSessions);
 		return paginator;
 	}
 
 	private ListEventsIterable mockEventsPaginator(List<Event> events) {
 		ListEventsIterable paginator = mock(ListEventsIterable.class);
-		when(paginator.events()).thenReturn(sdkIterableFromList(events));
+		SdkIterable<Event> sdkEvents = events::iterator;
+		when(paginator.events()).thenReturn(sdkEvents);
 		return paginator;
 	}
 
 	private RetrieveMemoryRecordsIterable mockRetrieveMemoryRecordsPaginator(List<MemoryRecordSummary> summaries) {
 		RetrieveMemoryRecordsIterable paginator = mock(RetrieveMemoryRecordsIterable.class);
-		when(paginator.memoryRecordSummaries()).thenReturn(sdkIterableFromList(summaries));
+		SdkIterable<MemoryRecordSummary> sdkSummaries = summaries::iterator;
+		when(paginator.memoryRecordSummaries()).thenReturn(sdkSummaries);
 		return paginator;
 	}
 
 	private ListMemoryRecordsIterable mockListMemoryRecordsPaginator(List<MemoryRecordSummary> summaries) {
 		ListMemoryRecordsIterable paginator = mock(ListMemoryRecordsIterable.class);
-		when(paginator.memoryRecordSummaries()).thenReturn(sdkIterableFromList(summaries));
+		SdkIterable<MemoryRecordSummary> sdkSummaries = summaries::iterator;
+		when(paginator.memoryRecordSummaries()).thenReturn(sdkSummaries);
 		return paginator;
 	}
 

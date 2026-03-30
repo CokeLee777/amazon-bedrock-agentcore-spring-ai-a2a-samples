@@ -34,41 +34,56 @@ import software.amazon.awssdk.services.bedrockagentcore.model.SearchCriteria;
 import software.amazon.awssdk.services.bedrockagentcore.model.SessionSummary;
 
 /**
- * {@link AdvancedBedrockAgentCoreChatMemoryRepository} backed by Amazon Bedrock AgentCore
- * Memory. {@code conversationId} is the Bedrock {@code sessionId}; {@code actorId} comes
- * from {@link BedrockAgentCoreChatMemoryConfig}.
+ * An implementation of {@link AdvancedBedrockAgentCoreChatMemoryRepository} backed by
+ * Amazon Bedrock AgentCore Memory.
+ *
+ * <p>
+ * Maps Spring AI {@link Message} objects to Bedrock AgentCore Events. The
+ * {@code conversationId} maps to the Bedrock AgentCore {@code sessionId}. Message roles
+ * are stored using the native {@link Role} enum in the {@code Conversational} payload.
+ * </p>
+ *
+ * <p>
+ * Use {@link #builder()} or construct directly with a
+ * {@link BedrockAgentCoreChatMemoryConfig}.
+ * </p>
  *
  * @author Chaemin Lee
+ * @see AdvancedBedrockAgentCoreChatMemoryRepository
  * @see BedrockAgentCoreChatMemoryConfig
  */
 public final class BedrockAgentCoreChatMemoryRepository implements AdvancedBedrockAgentCoreChatMemoryRepository {
 
 	private static final Logger logger = LoggerFactory.getLogger(BedrockAgentCoreChatMemoryRepository.class);
 
-	/** Metadata key storing Bedrock event id on round-tripped messages. */
-	public static final String METADATA_KEY_EVENT_ID = "bedrockEventId";
+	static final String METADATA_KEY_EVENT_ID = "bedrockEventId";
 
 	private final BedrockAgentCoreChatMemoryConfig config;
 
 	private final BedrockAgentCoreClient bedrockAgentCoreClient;
 
-	/**
-	 * Creates a repository from config.
-	 * @param config configuration including client, memory id, actor, limits
-	 */
 	public BedrockAgentCoreChatMemoryRepository(BedrockAgentCoreChatMemoryConfig config) {
 		Assert.notNull(config, "config must not be null");
+
 		this.config = config;
 		this.bedrockAgentCoreClient = config.getBedrockAgentCoreClient();
 	}
 
 	@Override
 	public List<String> findConversationIds() {
+		return findConversationIds(this.config.getActorId());
+	}
+
+	@Override
+	public List<String> findConversationIds(String actorId) {
+		Assert.hasText(actorId, "actorId must not be empty");
+
 		ListSessionsRequest request = ListSessionsRequest.builder()
 			.memoryId(this.config.getMemoryId())
-			.actorId(this.config.getActorId())
+			.actorId(actorId)
 			.maxResults(this.config.getMaxResults())
 			.build();
+
 		try {
 			return this.bedrockAgentCoreClient.listSessionsPaginator(request)
 				.sessionSummaries()
@@ -84,8 +99,15 @@ public final class BedrockAgentCoreChatMemoryRepository implements AdvancedBedro
 
 	@Override
 	public List<Message> findByConversationId(String conversationId) {
+		return findByConversationId(this.config.getActorId(), conversationId);
+	}
+
+	@Override
+	public List<Message> findByConversationId(String actorId, String conversationId) {
+		Assert.hasText(actorId, "actorId must not be empty");
 		Assert.hasText(conversationId, "conversationId must not be empty");
-		return findEventsByConversationId(conversationId,
+
+		return findEventsByConversationId(actorId, conversationId,
 				Comparator.comparing(Event::eventTimestamp, Comparator.nullsLast(Comparator.naturalOrder())))
 			.stream()
 			.map(BedrockAgentCoreChatMemoryRepository::toMessage)
@@ -94,15 +116,21 @@ public final class BedrockAgentCoreChatMemoryRepository implements AdvancedBedro
 
 	@Override
 	public void saveAll(String conversationId, List<Message> messages) {
+		saveAll(this.config.getActorId(), conversationId, messages);
+	}
+
+	@Override
+	public void saveAll(String actorId, String conversationId, List<Message> messages) {
+		Assert.hasText(actorId, "actorId must not be empty");
 		Assert.hasText(conversationId, "conversationId must not be empty");
 		Assert.notNull(messages, "messages must not be null");
 		Assert.noNullElements(messages, "messages cannot contain null elements");
 
-		deleteByConversationId(conversationId);
+		deleteByConversationId(actorId, conversationId);
 		for (Message message : messages) {
 			CreateEventRequest request = CreateEventRequest.builder()
 				.memoryId(this.config.getMemoryId())
-				.actorId(this.config.getActorId())
+				.actorId(actorId)
 				.sessionId(conversationId)
 				.eventTimestamp(Instant.now())
 				.payload(toPayload(message))
@@ -111,19 +139,27 @@ public final class BedrockAgentCoreChatMemoryRepository implements AdvancedBedro
 				this.bedrockAgentCoreClient.createEvent(request);
 			}
 			catch (Exception e) {
-				throw new IllegalStateException("Failed to save event for conversationId=" + conversationId, e);
+				throw new IllegalStateException(
+						"Failed to save event for actorId=" + actorId + ", conversationId=" + conversationId, e);
 			}
 		}
 	}
 
 	@Override
 	public void deleteByConversationId(String conversationId) {
+		deleteByConversationId(this.config.getActorId(), conversationId);
+	}
+
+	@Override
+	public void deleteByConversationId(String actorId, String conversationId) {
+		Assert.hasText(actorId, "actorId must not be empty");
 		Assert.hasText(conversationId, "conversationId must not be empty");
-		List<Event> events = findEventsByConversationId(conversationId, null);
+
+		List<Event> events = findEventsByConversationId(actorId, conversationId, null);
 		for (Event event : events) {
 			DeleteEventRequest request = DeleteEventRequest.builder()
 				.memoryId(this.config.getMemoryId())
-				.actorId(this.config.getActorId())
+				.actorId(actorId)
 				.sessionId(conversationId)
 				.eventId(event.eventId())
 				.build();
@@ -131,18 +167,21 @@ public final class BedrockAgentCoreChatMemoryRepository implements AdvancedBedro
 				this.bedrockAgentCoreClient.deleteEvent(request);
 			}
 			catch (Exception e) {
-				throw new IllegalStateException("Failed to delete event for conversationId=" + conversationId, e);
+				throw new IllegalStateException(
+						"Failed to delete event for actorId=" + actorId + ", conversationId=" + conversationId, e);
 			}
 		}
 	}
 
-	private List<Event> findEventsByConversationId(String conversationId, @Nullable Comparator<Event> comparator) {
+	private List<Event> findEventsByConversationId(String actorId, String conversationId,
+			@Nullable Comparator<Event> comparator) {
 		ListEventsRequest request = ListEventsRequest.builder()
 			.memoryId(this.config.getMemoryId())
-			.actorId(this.config.getActorId())
+			.actorId(actorId)
 			.sessionId(conversationId)
 			.includePayloads(true)
 			.build();
+
 		try {
 			Stream<Event> stream = this.bedrockAgentCoreClient.listEventsPaginator(request).events().stream();
 			if (comparator != null) {
@@ -151,7 +190,8 @@ public final class BedrockAgentCoreChatMemoryRepository implements AdvancedBedro
 			return stream.toList();
 		}
 		catch (Exception e) {
-			throw new IllegalStateException("Failed to list events for conversationId=" + conversationId, e);
+			throw new IllegalStateException(
+					"Failed to list events for actorId=" + actorId + ", conversationId=" + conversationId, e);
 		}
 	}
 
@@ -162,8 +202,13 @@ public final class BedrockAgentCoreChatMemoryRepository implements AdvancedBedro
 			case SYSTEM -> Role.OTHER;
 			default -> Role.USER;
 		};
+		// ToolResponseMessage stores its data in getResponses(), not getText().
+		// Bedrock AgentCore's Conversational payload is text-only, so ToolResponse
+		// entries (id, name, responseData) cannot be persisted and are intentionally
+		// discarded here. On read-back, toMessage() reconstructs a ToolResponseMessage
+		// with an empty responses list.
 		return PayloadType.fromConversational(
-				Conversational.builder().role(role).content(Content.fromText(message.getText())).build());
+				Conversational.builder().role(role).content(Content.builder().text(message.getText()).build()).build());
 	}
 
 	private static Message toMessage(Event event) {
@@ -202,11 +247,13 @@ public final class BedrockAgentCoreChatMemoryRepository implements AdvancedBedro
 	public List<MemoryRecordSummary> retrieveMemoryRecords(String namespace, String searchQuery) {
 		Assert.hasText(namespace, "namespace must not be empty");
 		Assert.hasText(searchQuery, "searchQuery must not be empty");
+
 		RetrieveMemoryRecordsRequest request = RetrieveMemoryRecordsRequest.builder()
 			.memoryId(this.config.getMemoryId())
 			.namespace(namespace)
 			.searchCriteria(SearchCriteria.builder().searchQuery(searchQuery).build())
 			.build();
+
 		try {
 			return this.bedrockAgentCoreClient.retrieveMemoryRecordsPaginator(request)
 				.memoryRecordSummaries()
@@ -222,10 +269,12 @@ public final class BedrockAgentCoreChatMemoryRepository implements AdvancedBedro
 	@Override
 	public List<MemoryRecordSummary> listMemoryRecords(String namespace) {
 		Assert.hasText(namespace, "namespace must not be empty");
+
 		ListMemoryRecordsRequest request = ListMemoryRecordsRequest.builder()
 			.memoryId(this.config.getMemoryId())
 			.namespace(namespace)
 			.build();
+
 		try {
 			return this.bedrockAgentCoreClient.listMemoryRecordsPaginator(request)
 				.memoryRecordSummaries()
@@ -241,6 +290,7 @@ public final class BedrockAgentCoreChatMemoryRepository implements AdvancedBedro
 	@Override
 	public void deleteMemoryRecord(String memoryRecordId) {
 		Assert.hasText(memoryRecordId, "memoryRecordId must not be empty");
+
 		DeleteMemoryRecordRequest request = DeleteMemoryRecordRequest.builder()
 			.memoryId(this.config.getMemoryId())
 			.memoryRecordId(memoryRecordId)
@@ -253,15 +303,13 @@ public final class BedrockAgentCoreChatMemoryRepository implements AdvancedBedro
 		}
 	}
 
-	/**
-	 * Creates a new builder.
-	 * @return the builder
-	 */
 	public static Builder builder() {
 		return new Builder();
 	}
 
-	/** Builder for {@link BedrockAgentCoreChatMemoryRepository}. */
+	/**
+	 * Builder for {@link BedrockAgentCoreChatMemoryRepository}.
+	 */
 	public static final class Builder {
 
 		private @Nullable BedrockAgentCoreClient bedrockAgentCoreClient;
@@ -301,13 +349,14 @@ public final class BedrockAgentCoreChatMemoryRepository implements AdvancedBedro
 			Assert.hasText(this.actorId, "actorId must not be empty");
 			Assert.isTrue(this.maxResults > 0 && this.maxResults <= 100,
 					"maxResults must be between 1 and 100 (inclusive)");
-			BedrockAgentCoreChatMemoryConfig cfg = BedrockAgentCoreChatMemoryConfig.builder()
+
+			BedrockAgentCoreChatMemoryConfig config = BedrockAgentCoreChatMemoryConfig.builder()
 				.bedrockAgentCoreClient(this.bedrockAgentCoreClient)
 				.memoryId(this.memoryId)
 				.actorId(this.actorId)
 				.maxResults(this.maxResults)
 				.build();
-			return new BedrockAgentCoreChatMemoryRepository(cfg);
+			return new BedrockAgentCoreChatMemoryRepository(config);
 		}
 
 	}
