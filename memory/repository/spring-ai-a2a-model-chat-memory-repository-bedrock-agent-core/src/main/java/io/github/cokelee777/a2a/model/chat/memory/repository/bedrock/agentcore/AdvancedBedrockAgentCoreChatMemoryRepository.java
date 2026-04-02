@@ -31,6 +31,11 @@ import java.util.List;
  * {@code actorId}. The {@link ChatMemoryRepository} methods delegate to those overloads
  * using {@link BedrockAgentCoreChatMemoryConfig#getActorId()}.
  *
+ * <p>
+ * All retrieval methods use the Bedrock SDK paginators, which automatically traverse all
+ * pages (default page size: 20). The complete result set is always returned regardless of
+ * the number of pages required.
+ *
  * @see BedrockAgentCoreChatMemoryRepository
  * @see BedrockAgentCoreChatMemoryConfig
  */
@@ -38,6 +43,11 @@ public interface AdvancedBedrockAgentCoreChatMemoryRepository extends ChatMemory
 
 	/**
 	 * Lists conversation ids (Bedrock session ids) for the given actor.
+	 *
+	 * <p>
+	 * Uses the Bedrock SDK paginator ({@code listSessionsPaginator}) to automatically
+	 * traverse all pages. The SDK fetches pages of up to 20 items by default, but all
+	 * pages are consumed transparently and the full result set is returned.
 	 * @param actorId the Bedrock AgentCore actor identifier
 	 * @return session ids, never {@code null}
 	 */
@@ -45,9 +55,14 @@ public interface AdvancedBedrockAgentCoreChatMemoryRepository extends ChatMemory
 
 	/**
 	 * Loads all messages for a conversation scoped to the given actor.
+	 *
+	 * <p>
+	 * Uses the Bedrock SDK paginator ({@code listEventsPaginator}) to automatically
+	 * traverse all pages. The SDK fetches pages of up to 20 items by default, but all
+	 * pages are consumed transparently and the full result set is returned.
 	 * @param actorId the Bedrock AgentCore actor identifier
 	 * @param conversationId the conversation id (Bedrock session id)
-	 * @return messages in order, never {@code null}
+	 * @return messages in chronological order, never {@code null}
 	 */
 	List<Message> findByConversationId(String actorId, String conversationId);
 
@@ -68,6 +83,12 @@ public interface AdvancedBedrockAgentCoreChatMemoryRepository extends ChatMemory
 
 	/**
 	 * Semantically searches long-term memory records under the namespace.
+	 *
+	 * <p>
+	 * Uses the Bedrock SDK paginator ({@code retrieveMemoryRecordsPaginator}) to
+	 * automatically traverse all pages. The SDK fetches pages of up to 20 items by
+	 * default, but all pages are consumed transparently and the full result set is
+	 * returned.
 	 * @param namespace namespace prefix for stored records
 	 * @param searchQuery natural-language query (up to 10,000 characters)
 	 * @return matching summaries ordered by relevance, never {@code null}
@@ -76,6 +97,11 @@ public interface AdvancedBedrockAgentCoreChatMemoryRepository extends ChatMemory
 
 	/**
 	 * Lists long-term memory records under the namespace without semantic search.
+	 *
+	 * <p>
+	 * Uses the Bedrock SDK paginator ({@code listMemoryRecordsPaginator}) to automatically
+	 * traverse all pages. The SDK fetches pages of up to 20 items by default, but all
+	 * pages are consumed transparently and the full result set is returned.
 	 * @param namespace namespace prefix
 	 * @return summaries, never {@code null}
 	 */
