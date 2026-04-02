@@ -81,24 +81,6 @@ class BedrockAgentCoreChatMemoryRepositoryTests {
 	}
 
 	@Test
-	void builderRejectsZeroMaxResults() {
-		assertThatThrownBy(() -> BedrockAgentCoreChatMemoryRepository.builder()
-			.bedrockAgentCoreClient(this.client)
-			.memoryId("test-store")
-			.maxResults(0)
-			.build()).isInstanceOf(IllegalArgumentException.class).hasMessageContaining("maxResults");
-	}
-
-	@Test
-	void builderRejectsMaxResultsAbove100() {
-		assertThatThrownBy(() -> BedrockAgentCoreChatMemoryRepository.builder()
-			.bedrockAgentCoreClient(this.client)
-			.memoryId("test-store")
-			.maxResults(101)
-			.build()).isInstanceOf(IllegalArgumentException.class).hasMessageContaining("maxResults");
-	}
-
-	@Test
 	void saveAllRejectsNullMessages() {
 		assertThatThrownBy(() -> this.repository.saveAll("conv-1", null)).isInstanceOf(IllegalArgumentException.class)
 			.hasMessageContaining("messages");

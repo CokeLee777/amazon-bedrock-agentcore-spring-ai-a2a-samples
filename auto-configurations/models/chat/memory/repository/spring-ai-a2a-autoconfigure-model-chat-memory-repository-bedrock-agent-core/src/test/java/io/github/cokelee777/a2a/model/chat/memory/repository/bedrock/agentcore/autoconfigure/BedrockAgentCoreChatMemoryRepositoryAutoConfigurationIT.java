@@ -42,26 +42,6 @@ class BedrockAgentCoreChatMemoryRepositoryAutoConfigurationIT {
 	}
 
 	@Test
-	void defaultMaxResultsIs100() {
-		this.contextRunner.run(ctx -> {
-			BedrockAgentCoreChatMemoryRepositoryProperties props = ctx
-				.getBean(BedrockAgentCoreChatMemoryRepositoryProperties.class);
-			assertThat(props.getMaxResults()).isEqualTo(100);
-		});
-	}
-
-	@Test
-	void customMaxResultsIsApplied() {
-		this.contextRunner
-			.withPropertyValues("spring.ai.chat.memory.repository.bedrock.agent-core.memory.max-results=50")
-			.run(ctx -> {
-				BedrockAgentCoreChatMemoryRepositoryProperties props = ctx
-					.getBean(BedrockAgentCoreChatMemoryRepositoryProperties.class);
-				assertThat(props.getMaxResults()).isEqualTo(50);
-			});
-	}
-
-	@Test
 	void defaultActorIdIsSpringAi() {
 		this.contextRunner.run(ctx -> {
 			BedrockAgentCoreChatMemoryRepositoryProperties props = ctx

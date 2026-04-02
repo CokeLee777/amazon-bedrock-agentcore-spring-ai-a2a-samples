@@ -14,31 +14,20 @@ public final class BedrockAgentCoreChatMemoryConfig {
 	/** Default actor ID when none is configured explicitly. */
 	public static final String DEFAULT_ACTOR_ID = "spring-ai";
 
-	/**
-	 * Default maximum number of results for list / retrieve operations (AWS allows up to
-	 * 100).
-	 */
-	public static final int DEFAULT_MAX_RESULTS = 100;
-
 	private final BedrockAgentCoreClient bedrockAgentCoreClient;
 
 	private final String memoryId;
 
 	private final String actorId;
 
-	private final int maxResults;
-
 	private BedrockAgentCoreChatMemoryConfig(Builder builder) {
 		Assert.notNull(builder.bedrockAgentCoreClient, "bedrockAgentCoreClient must not be null");
 		Assert.hasText(builder.memoryId, "memoryId must not be empty");
 		Assert.hasText(builder.actorId, "actorId must not be empty");
-		Assert.isTrue(builder.maxResults > 0 && builder.maxResults <= 100,
-				"maxResults must be between 1 and 100 (inclusive)");
 
 		this.bedrockAgentCoreClient = builder.bedrockAgentCoreClient;
 		this.memoryId = builder.memoryId;
 		this.actorId = builder.actorId;
-		this.maxResults = builder.maxResults;
 	}
 
 	/**
@@ -61,10 +50,6 @@ public final class BedrockAgentCoreChatMemoryConfig {
 		return this.actorId;
 	}
 
-	public int getMaxResults() {
-		return this.maxResults;
-	}
-
 	/** Builder for {@link BedrockAgentCoreChatMemoryConfig}. */
 	public static final class Builder {
 
@@ -73,8 +58,6 @@ public final class BedrockAgentCoreChatMemoryConfig {
 		private @Nullable String memoryId;
 
 		private String actorId = DEFAULT_ACTOR_ID;
-
-		private int maxResults = DEFAULT_MAX_RESULTS;
 
 		private Builder() {
 		}
@@ -91,11 +74,6 @@ public final class BedrockAgentCoreChatMemoryConfig {
 
 		public Builder actorId(String actorId) {
 			this.actorId = actorId;
-			return this;
-		}
-
-		public Builder maxResults(int maxResults) {
-			this.maxResults = maxResults;
 			return this;
 		}
 

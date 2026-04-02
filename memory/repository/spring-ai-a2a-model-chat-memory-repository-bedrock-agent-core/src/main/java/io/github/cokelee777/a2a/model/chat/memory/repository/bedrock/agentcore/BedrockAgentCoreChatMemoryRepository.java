@@ -80,7 +80,6 @@ public final class BedrockAgentCoreChatMemoryRepository implements AdvancedBedro
 		ListSessionsRequest request = ListSessionsRequest.builder()
 			.memoryId(this.config.getMemoryId())
 			.actorId(actorId)
-			.maxResults(this.config.getMaxResults())
 			.build();
 
 		try {
@@ -178,7 +177,6 @@ public final class BedrockAgentCoreChatMemoryRepository implements AdvancedBedro
 			.actorId(actorId)
 			.sessionId(conversationId)
 			.includePayloads(true)
-			.maxResults(this.config.getMaxResults())
 			.build();
 
 		try {
@@ -251,7 +249,6 @@ public final class BedrockAgentCoreChatMemoryRepository implements AdvancedBedro
 			.memoryId(this.config.getMemoryId())
 			.namespace(namespace)
 			.searchCriteria(SearchCriteria.builder().searchQuery(searchQuery).build())
-			.maxResults(this.config.getMaxResults())
 			.build();
 
 		try {
@@ -272,7 +269,6 @@ public final class BedrockAgentCoreChatMemoryRepository implements AdvancedBedro
 		ListMemoryRecordsRequest request = ListMemoryRecordsRequest.builder()
 			.memoryId(this.config.getMemoryId())
 			.namespace(namespace)
-			.maxResults(this.config.getMaxResults())
 			.build();
 
 		try {
@@ -317,8 +313,6 @@ public final class BedrockAgentCoreChatMemoryRepository implements AdvancedBedro
 
 		private String actorId = BedrockAgentCoreChatMemoryConfig.DEFAULT_ACTOR_ID;
 
-		private int maxResults = BedrockAgentCoreChatMemoryConfig.DEFAULT_MAX_RESULTS;
-
 		private Builder() {
 		}
 
@@ -337,23 +331,15 @@ public final class BedrockAgentCoreChatMemoryRepository implements AdvancedBedro
 			return this;
 		}
 
-		public Builder maxResults(int maxResults) {
-			this.maxResults = maxResults;
-			return this;
-		}
-
 		public BedrockAgentCoreChatMemoryRepository build() {
 			Assert.notNull(this.bedrockAgentCoreClient, "bedrockAgentCoreClient must not be null");
 			Assert.hasText(this.memoryId, "memoryId must not be empty");
 			Assert.hasText(this.actorId, "actorId must not be empty");
-			Assert.isTrue(this.maxResults > 0 && this.maxResults <= 100,
-					"maxResults must be between 1 and 100 (inclusive)");
 
 			BedrockAgentCoreChatMemoryConfig config = BedrockAgentCoreChatMemoryConfig.builder()
 				.bedrockAgentCoreClient(this.bedrockAgentCoreClient)
 				.memoryId(this.memoryId)
 				.actorId(this.actorId)
-				.maxResults(this.maxResults)
 				.build();
 			return new BedrockAgentCoreChatMemoryRepository(config);
 		}

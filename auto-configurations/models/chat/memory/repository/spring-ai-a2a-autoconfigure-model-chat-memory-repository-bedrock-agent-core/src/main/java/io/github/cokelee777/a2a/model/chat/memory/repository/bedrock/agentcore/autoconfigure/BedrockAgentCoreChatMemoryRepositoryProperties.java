@@ -21,9 +21,6 @@ public class BedrockAgentCoreChatMemoryRepositoryProperties {
 	/** Actor id for this application in AgentCore Memory. */
 	private String actorId = BedrockAgentCoreChatMemoryConfig.DEFAULT_ACTOR_ID;
 
-	/** Max results for list / retrieve operations (1–100). */
-	private int maxResults = BedrockAgentCoreChatMemoryConfig.DEFAULT_MAX_RESULTS;
-
 	public @Nullable String getMemoryId() {
 		return this.memoryId;
 	}
@@ -38,14 +35,6 @@ public class BedrockAgentCoreChatMemoryRepositoryProperties {
 
 	public void setActorId(String actorId) {
 		this.actorId = actorId;
-	}
-
-	public int getMaxResults() {
-		return this.maxResults;
-	}
-
-	public void setMaxResults(int maxResults) {
-		this.maxResults = maxResults;
 	}
 
 }

@@ -59,7 +59,6 @@ public class BedrockAgentCoreChatMemoryRepositoryAutoConfiguration {
 			.bedrockAgentCoreClient(client)
 			.memoryId(props.getMemoryId())
 			.actorId(props.getActorId())
-			.maxResults(props.getMaxResults())
 			.build();
 
 		return new BedrockAgentCoreChatMemoryRepository(config);
