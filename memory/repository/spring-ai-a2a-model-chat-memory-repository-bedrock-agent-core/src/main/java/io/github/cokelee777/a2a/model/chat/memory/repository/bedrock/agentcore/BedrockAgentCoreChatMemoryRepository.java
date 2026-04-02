@@ -87,7 +87,6 @@ public final class BedrockAgentCoreChatMemoryRepository implements AdvancedBedro
 			return this.bedrockAgentCoreClient.listSessionsPaginator(request)
 				.sessionSummaries()
 				.stream()
-				.limit(this.config.getMaxResults())
 				.map(SessionSummary::sessionId)
 				.toList();
 		}
@@ -179,6 +178,7 @@ public final class BedrockAgentCoreChatMemoryRepository implements AdvancedBedro
 			.actorId(actorId)
 			.sessionId(conversationId)
 			.includePayloads(true)
+			.maxResults(this.config.getMaxResults())
 			.build();
 
 		try {
@@ -251,13 +251,13 @@ public final class BedrockAgentCoreChatMemoryRepository implements AdvancedBedro
 			.memoryId(this.config.getMemoryId())
 			.namespace(namespace)
 			.searchCriteria(SearchCriteria.builder().searchQuery(searchQuery).build())
+			.maxResults(this.config.getMaxResults())
 			.build();
 
 		try {
 			return this.bedrockAgentCoreClient.retrieveMemoryRecordsPaginator(request)
 				.memoryRecordSummaries()
 				.stream()
-				.limit(this.config.getMaxResults())
 				.toList();
 		}
 		catch (Exception e) {
@@ -272,13 +272,13 @@ public final class BedrockAgentCoreChatMemoryRepository implements AdvancedBedro
 		ListMemoryRecordsRequest request = ListMemoryRecordsRequest.builder()
 			.memoryId(this.config.getMemoryId())
 			.namespace(namespace)
+			.maxResults(this.config.getMaxResults())
 			.build();
 
 		try {
 			return this.bedrockAgentCoreClient.listMemoryRecordsPaginator(request)
 				.memoryRecordSummaries()
 				.stream()
-				.limit(this.config.getMaxResults())
 				.toList();
 		}
 		catch (Exception e) {
