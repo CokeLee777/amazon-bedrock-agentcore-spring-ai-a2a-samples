@@ -109,8 +109,8 @@ public interface AdvancedBedrockAgentCoreChatMemoryRepository extends ChatMemory
 	List<MemoryRecordSummary> listMemoryRecords(String namespace);
 
 	/**
-	 * Deletes a long-term memory record by id.
-	 * @param memoryRecordId record identifier
+	 * Deletes a specific long-term memory record by its ID.
+	 * @param memoryRecordId the memory record identifier
 	 */
 	void deleteMemoryRecord(String memoryRecordId);
 
