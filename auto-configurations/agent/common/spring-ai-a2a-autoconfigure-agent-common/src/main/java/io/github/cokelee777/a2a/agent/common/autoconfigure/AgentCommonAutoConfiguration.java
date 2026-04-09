@@ -3,19 +3,16 @@ package io.github.cokelee777.a2a.agent.common.autoconfigure;
 import org.springframework.boot.autoconfigure.AutoConfiguration;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;
-import org.springframework.context.annotation.Import;
 
 /**
  * Autoconfiguration for spring-ai-a2a-agent-common shared components.
  *
  * <p>
- * Registers {@link PingController}, {@link RemoteAgentProperties} binding for
- * {@code a2a.remote.*}, and {@link RemoteAgentCardRegistry} when this module is on the
- * classpath.
+ * Registers {@link RemoteAgentProperties} binding for {@code a2a.remote.*} and
+ * {@link RemoteAgentCardRegistry} when this module is on the classpath.
  * </p>
  */
 @AutoConfiguration
-@Import(PingController.class)
 @EnableConfigurationProperties(RemoteAgentProperties.class)
 public class AgentCommonAutoConfiguration {
 

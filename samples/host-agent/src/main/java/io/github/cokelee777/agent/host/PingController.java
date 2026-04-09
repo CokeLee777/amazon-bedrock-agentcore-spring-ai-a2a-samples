@@ -1,4 +1,4 @@
-package io.github.cokelee777.a2a.agent.common.autoconfigure;
+package io.github.cokelee777.agent.host;
 
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
