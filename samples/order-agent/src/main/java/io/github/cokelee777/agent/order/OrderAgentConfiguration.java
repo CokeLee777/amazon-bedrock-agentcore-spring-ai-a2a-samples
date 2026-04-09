@@ -32,11 +32,12 @@ public class OrderAgentConfiguration {
 
 	/**
 	 * Builds the agent card advertising the order agent's skills.
-	 * @param agentUrl base URL of this agent; injected from {@code a2a.agent-url}
+	 * @param agentUrl base URL of this agent; injected from
+	 * {@code spring.ai.a2a.server.url}
 	 * @return the fully constructed {@link AgentCard}
 	 */
 	@Bean
-	public AgentCard agentCard(@Value("${a2a.agent-url}") String agentUrl) {
+	public AgentCard agentCard(@Value("${spring.ai.a2a.server.url}") String agentUrl) {
 		return new AgentCard.Builder().name("Order Agent")
 			.description("주문 내역 조회 및 취소 가능 여부를 확인하는 에이전트. 배송 에이전트와 결제 에이전트를 내부적으로 호출하여 통합 정보를 제공합니다.")
 			.url(agentUrl)

@@ -5,9 +5,11 @@ spring:
   config:
     activate:
       on-profile: local
-
-a2a:
-  agent-url: http://localhost:9002
+  ai:
+    a2a:
+      server:
+        enabled: true
+        url: http://localhost:${server.port}
 
 logging:
   level:

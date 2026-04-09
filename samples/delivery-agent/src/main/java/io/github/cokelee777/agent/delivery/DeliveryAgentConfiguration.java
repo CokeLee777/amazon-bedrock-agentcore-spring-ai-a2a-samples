@@ -31,11 +31,12 @@ public class DeliveryAgentConfiguration {
 
 	/**
 	 * Builds the agent card advertising the delivery agent's skills.
-	 * @param agentUrl base URL of this agent; injected from {@code a2a.agent-url}
+	 * @param agentUrl base URL of this agent; injected from
+	 * {@code spring.ai.a2a.server.url}
 	 * @return the fully constructed {@link AgentCard}
 	 */
 	@Bean
-	public AgentCard agentCard(@Value("${a2a.agent-url}") String agentUrl) {
+	public AgentCard agentCard(@Value("${spring.ai.a2a.server.url}") String agentUrl) {
 		return new AgentCard.Builder().name("Delivery Agent")
 			.description("전체 배송 목록 조회 및 운송장번호로 배송 상태를 추적하는 에이전트")
 			.url(agentUrl)

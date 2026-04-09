@@ -13,6 +13,7 @@ spring:
     a2a:
       server:
         enabled: true
+        url: ${A2A_SERVER_URL:}
       remote:
         agents:
           delivery-agent:
@@ -24,6 +25,3 @@ spring:
         name: order-agent
         version: 1.0.0
         protocol: STREAMABLE
-
-a2a:
-  agent-url: ${AGENT_URL:}

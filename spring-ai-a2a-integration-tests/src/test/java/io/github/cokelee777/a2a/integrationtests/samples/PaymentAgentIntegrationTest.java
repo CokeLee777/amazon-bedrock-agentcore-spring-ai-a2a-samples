@@ -33,7 +33,7 @@ import static org.mockito.Mockito.when;
  * </p>
  */
 @SpringBootTest(classes = PaymentAgentApplication.class, webEnvironment = SpringBootTest.WebEnvironment.DEFINED_PORT,
-		properties = { "server.port=19003", "a2a.agent-url=http://localhost:19003",
+		properties = { "server.port=19003", "spring.ai.a2a.server.url=http://localhost:19003",
 				"spring.autoconfigure.exclude=org.springframework.ai.model.bedrock.converse.autoconfigure.BedrockConverseProxyChatAutoConfiguration" })
 class PaymentAgentIntegrationTest {
 

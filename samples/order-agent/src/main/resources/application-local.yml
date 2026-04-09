@@ -7,15 +7,15 @@ spring:
       on-profile: local
   ai:
     a2a:
+      server:
+        enabled: true
+        url: http://localhost:${server.port}
       remote:
         agents:
           delivery-agent:
             url: http://localhost:9002
           payment-agent:
             url: http://localhost:9003
-
-a2a:
-  agent-url: http://localhost:9001
 
 logging:
   level:
