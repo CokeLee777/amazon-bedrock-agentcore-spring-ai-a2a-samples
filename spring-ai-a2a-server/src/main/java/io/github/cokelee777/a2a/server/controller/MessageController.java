@@ -1,6 +1,7 @@
 package io.github.cokelee777.a2a.server.controller;
 
 import io.a2a.server.ServerCallContext;
+import io.a2a.server.auth.UnauthenticatedUser;
 import io.a2a.server.requesthandlers.RequestHandler;
 import io.a2a.spec.EventKind;
 import io.a2a.spec.JSONRPCError;
@@ -29,29 +30,37 @@ public class MessageController {
 
 	/**
 	 * Handles sendMessage JSON-RPC requests.
+	 *
+	 * <p>
+	 * Per JSON-RPC 2.0 spec, errors are returned as 200 OK with an {@code error} field in
+	 * the response body, not as HTTP error status codes.
+	 *
+	 * <p>
+	 * Streaming ({@code configuration.blocking = false}) is not yet supported. Requests
+	 * with {@code blocking=false} receive a {@code -32601} Method Not Found error.
 	 */
 	@PostMapping(path = "/", consumes = MediaType.APPLICATION_JSON_VALUE, produces = MediaType.APPLICATION_JSON_VALUE)
-	public SendMessageResponse sendMessage(@RequestBody SendMessageRequest request) throws JSONRPCError {
+	public SendMessageResponse sendMessage(@RequestBody SendMessageRequest request) {
 		MessageSendParams params = request.getParams();
 		log.debug("Received sendMessage request - id: {}", request.getId());
 
 		try {
-			// TODO: Add support for auth context, state, and extensions
-			ServerCallContext context = new ServerCallContext(null, Map.of(), Set.of());
+			// TODO: Add support for auth context and extensions
+			ServerCallContext context = new ServerCallContext(UnauthenticatedUser.INSTANCE, Map.of(), Set.of());
 
-			// Delegate to SDK's RequestHandler - handles all protocol logic
-			EventKind result = requestHandler.onMessageSend(params, context);
+			EventKind result = this.requestHandler.onMessageSend(params, context);
 
 			log.debug("Message processed successfully - id: {}", request.getId());
 			return new SendMessageResponse(request.getId(), result);
 		}
 		catch (JSONRPCError e) {
 			log.error("Error processing message - id: {}", request.getId(), e);
-			throw e;
+			return new SendMessageResponse(request.getId(), e);
 		}
 		catch (Exception e) {
 			log.error("Unexpected error processing message - id: {}", request.getId(), e);
-			throw new JSONRPCError(-32603, "Internal error: " + e.getMessage(), null);
+			return new SendMessageResponse(request.getId(),
+					new JSONRPCError(-32603, "Internal error: " + e.getMessage(), null));
 		}
 	}
 

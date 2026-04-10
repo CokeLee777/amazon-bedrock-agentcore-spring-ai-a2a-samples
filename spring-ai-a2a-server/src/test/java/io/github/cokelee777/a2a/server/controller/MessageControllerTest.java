@@ -12,12 +12,7 @@ import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.http.MediaType;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
-import org.assertj.core.util.Throwables;
-
-import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.catchThrowable;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
@@ -66,7 +61,7 @@ class MessageControllerTest {
 	}
 
 	@Test
-	void sendMessage_jsonRpcErrorFromHandler_propagates() throws Exception {
+	void sendMessage_jsonRpcErrorFromHandler_returnedAsJsonRpcErrorResponse() throws Exception {
 		when(this.requestHandler.onMessageSend(any(MessageSendParams.class), any()))
 			.thenThrow(new JSONRPCError(-32001, "upstream", null));
 
@@ -86,16 +81,15 @@ class MessageControllerTest {
 				}
 				""";
 
-		Throwable thrown = catchThrowable(
-				() -> this.mockMvc.perform(post("/").contentType(MediaType.APPLICATION_JSON).content(body)));
-
-		assertThat(thrown).hasRootCauseInstanceOf(JSONRPCError.class);
-		JSONRPCError error = (JSONRPCError) Throwables.getRootCause(thrown);
-		assertThat(error.getCode()).isEqualTo(-32001);
+		this.mockMvc.perform(post("/").contentType(MediaType.APPLICATION_JSON).content(body))
+			.andExpect(status().isOk())
+			.andExpect(jsonPath("$.id").value("rpc-err"))
+			.andExpect(jsonPath("$.error.code").value(-32001))
+			.andExpect(jsonPath("$.error.message").value("upstream"));
 	}
 
 	@Test
-	void sendMessage_unexpectedException_wrappedAsInternalJsonRpcError() throws Exception {
+	void sendMessage_unexpectedException_returnedAsInternalJsonRpcError() throws Exception {
 		when(this.requestHandler.onMessageSend(any(MessageSendParams.class), any()))
 			.thenThrow(new IllegalStateException("boom"));
 
@@ -115,13 +109,11 @@ class MessageControllerTest {
 				}
 				""";
 
-		Throwable thrown = catchThrowable(
-				() -> this.mockMvc.perform(post("/").contentType(MediaType.APPLICATION_JSON).content(body)));
-
-		assertThat(thrown).hasRootCauseInstanceOf(JSONRPCError.class);
-		JSONRPCError error = (JSONRPCError) Throwables.getRootCause(thrown);
-		assertThat(error.getCode()).isEqualTo(-32603);
-		assertThat(error.getMessage()).contains("Internal error: boom");
+		this.mockMvc.perform(post("/").contentType(MediaType.APPLICATION_JSON).content(body))
+			.andExpect(status().isOk())
+			.andExpect(jsonPath("$.id").value("rpc-wrap"))
+			.andExpect(jsonPath("$.error.code").value(-32603))
+			.andExpect(jsonPath("$.error.message").value("Internal error: boom"));
 	}
 
 	@Test

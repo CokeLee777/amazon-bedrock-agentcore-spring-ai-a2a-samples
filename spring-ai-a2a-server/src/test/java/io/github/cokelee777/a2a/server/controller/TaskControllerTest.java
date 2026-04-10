@@ -13,15 +13,11 @@ import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.http.MediaType;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
-import org.assertj.core.util.Throwables;
 
-import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.catchThrowable;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -43,10 +39,20 @@ class TaskControllerTest {
 		Task task = A2AServerTestFixtures.taskInState("task-x", "ctx-x", TaskState.WORKING);
 		when(this.requestHandler.onGetTask(any(TaskQueryParams.class), any())).thenReturn(task);
 
-		this.mockMvc.perform(get("/tasks/task-x").accept(MediaType.APPLICATION_JSON))
+		String body = """
+				{
+				  "jsonrpc": "2.0",
+				  "id": "rpc-1",
+				  "method": "tasks/get",
+				  "params": {"id": "task-x"}
+				}
+				""";
+
+		this.mockMvc.perform(post("/tasks/get").contentType(MediaType.APPLICATION_JSON).content(body))
 			.andExpect(status().isOk())
-			.andExpect(jsonPath("$.id").value("task-x"))
-			.andExpect(jsonPath("$.status.state").value("working"));
+			.andExpect(jsonPath("$.id").value("rpc-1"))
+			.andExpect(jsonPath("$.result.id").value("task-x"))
+			.andExpect(jsonPath("$.result.status.state").value("working"));
 
 		verify(this.requestHandler).onGetTask(eq(new TaskQueryParams("task-x")), any());
 	}
@@ -56,36 +62,63 @@ class TaskControllerTest {
 		Task task = A2AServerTestFixtures.taskInState("task-x", "ctx-x", TaskState.CANCELED);
 		when(this.requestHandler.onCancelTask(any(TaskIdParams.class), any())).thenReturn(task);
 
-		this.mockMvc.perform(post("/tasks/task-x/cancel").accept(MediaType.APPLICATION_JSON))
+		String body = """
+				{
+				  "jsonrpc": "2.0",
+				  "id": "rpc-2",
+				  "method": "tasks/cancel",
+				  "params": {"id": "task-x"}
+				}
+				""";
+
+		this.mockMvc.perform(post("/tasks/cancel").contentType(MediaType.APPLICATION_JSON).content(body))
 			.andExpect(status().isOk())
-			.andExpect(jsonPath("$.status.state").value("canceled"));
+			.andExpect(jsonPath("$.id").value("rpc-2"))
+			.andExpect(jsonPath("$.result.status.state").value("canceled"));
 
 		verify(this.requestHandler).onCancelTask(eq(new TaskIdParams("task-x")), any());
 	}
 
 	@Test
-	void getTask_jsonRpcErrorFromHandler_propagates() throws Exception {
+	void getTask_jsonRpcErrorFromHandler_returnedAsJsonRpcErrorResponse() throws Exception {
 		when(this.requestHandler.onGetTask(any(TaskQueryParams.class), any()))
 			.thenThrow(new JSONRPCError(-32001, "no task", null));
 
-		Throwable thrown = catchThrowable(
-				() -> this.mockMvc.perform(get("/tasks/missing").accept(MediaType.APPLICATION_JSON)));
+		String body = """
+				{
+				  "jsonrpc": "2.0",
+				  "id": "rpc-err",
+				  "method": "tasks/get",
+				  "params": {"id": "missing"}
+				}
+				""";
 
-		assertThat(thrown).hasRootCauseInstanceOf(JSONRPCError.class);
+		this.mockMvc.perform(post("/tasks/get").contentType(MediaType.APPLICATION_JSON).content(body))
+			.andExpect(status().isOk())
+			.andExpect(jsonPath("$.id").value("rpc-err"))
+			.andExpect(jsonPath("$.error.code").value(-32001))
+			.andExpect(jsonPath("$.error.message").value("no task"));
 	}
 
 	@Test
-	void getTask_unexpectedException_wrappedAsInternalJsonRpcError() throws Exception {
+	void getTask_unexpectedException_returnedAsInternalJsonRpcError() throws Exception {
 		when(this.requestHandler.onGetTask(any(TaskQueryParams.class), any()))
 			.thenThrow(new RuntimeException("db down"));
 
-		Throwable thrown = catchThrowable(
-				() -> this.mockMvc.perform(get("/tasks/broken").accept(MediaType.APPLICATION_JSON)));
+		String body = """
+				{
+				  "jsonrpc": "2.0",
+				  "id": "rpc-fail",
+				  "method": "tasks/get",
+				  "params": {"id": "broken"}
+				}
+				""";
 
-		assertThat(thrown).hasRootCauseInstanceOf(JSONRPCError.class);
-		JSONRPCError error = (JSONRPCError) Throwables.getRootCause(thrown);
-		assertThat(error.getCode()).isEqualTo(-32603);
-		assertThat(error.getMessage()).contains("Internal error: db down");
+		this.mockMvc.perform(post("/tasks/get").contentType(MediaType.APPLICATION_JSON).content(body))
+			.andExpect(status().isOk())
+			.andExpect(jsonPath("$.id").value("rpc-fail"))
+			.andExpect(jsonPath("$.error.code").value(-32603))
+			.andExpect(jsonPath("$.error.message").value("Internal error: db down"));
 	}
 
 }
