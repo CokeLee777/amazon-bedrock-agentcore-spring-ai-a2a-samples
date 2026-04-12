@@ -7,8 +7,8 @@ import io.a2a.spec.AgentInterface;
 import io.a2a.spec.AgentSkill;
 import io.a2a.spec.TransportProtocol;
 import io.github.cokelee777.a2a.agent.common.util.TextExtractor;
-import io.github.cokelee777.a2a.server.executor.ChatClientExecutorHandler;
-import io.github.cokelee777.a2a.server.executor.DefaultAgentExecutor;
+import io.github.cokelee777.a2a.server.executor.StreamingAgentExecutor;
+import io.github.cokelee777.a2a.server.executor.StreamingChatClientExecutorHandler;
 import org.springframework.ai.chat.client.ChatClient;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
@@ -43,7 +43,7 @@ public class OrderAgentConfiguration {
 			.url(agentUrl)
 			.additionalInterfaces(List.of(new AgentInterface(TransportProtocol.JSONRPC.asString(), agentUrl)))
 			.version("1.0.0")
-			.capabilities(new AgentCapabilities.Builder().streaming(false).pushNotifications(false).build())
+			.capabilities(new AgentCapabilities.Builder().streaming(true).pushNotifications(false).build())
 			.defaultInputModes(List.of("text"))
 			.defaultOutputModes(List.of("text"))
 			.skills(List.of(
@@ -72,19 +72,14 @@ public class OrderAgentConfiguration {
 		return builder.clone().defaultSystem(SYSTEM_PROMPT).defaultTools(tools).build();
 	}
 
-	/**
-	 * Creates the {@link AgentExecutor} using {@link DefaultAgentExecutor} with
-	 * {@link OrderTools} as the registered tool (via {@link #chatClient}).
-	 * @param chatClient the order {@link ChatClient} bean
-	 * @return a configured {@link AgentExecutor}
-	 */
+	/** AgentExecutor backed by {@link StreamingAgentExecutor}. */
 	@Bean
 	public AgentExecutor agentExecutor(ChatClient chatClient) {
-		ChatClientExecutorHandler handler = (chat, ctx) -> {
+		StreamingChatClientExecutorHandler handler = (chat, ctx) -> {
 			String msg = TextExtractor.extractTextFromMessage(ctx.getMessage());
-			return chat.prompt().user(msg).call().content();
+			return chat.prompt().user(msg).stream().content();
 		};
-		return new DefaultAgentExecutor(chatClient, handler);
+		return new StreamingAgentExecutor(chatClient, handler);
 	}
 
 }

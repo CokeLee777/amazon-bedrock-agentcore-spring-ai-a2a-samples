@@ -10,6 +10,7 @@ spring:
         chat:
           options:
             model: ${BEDROCK_MODEL_ID:}
+            max-tokens: ${BEDROCK_MAX_TOKENS:8096}
     chat:
       memory:
         repository:
@@ -18,7 +19,6 @@ spring:
               memory:
                 memory-id: ${BEDROCK_MEMORY_ID:BEDROCK_MEMORY_ID_PLACE_HOLDER}
                 actor-id: ${BEDROCK_ACTOR_ID:BEDROCK_ACTOR_ID_PLACE_HOLDER}
-                max-results: 100
     a2a:
       remote:
         agents:

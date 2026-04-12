@@ -17,6 +17,8 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.web.client.RestClient;
 
+import reactor.core.publisher.Flux;
+
 import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -51,6 +53,7 @@ class OrderAgentIntegrationTest {
 	void setupChatModelMock() {
 		ChatResponse response = new ChatResponse(List.of(new Generation(new AssistantMessage(MOCK_RESPONSE))));
 		when(chatModel.call(any(Prompt.class))).thenReturn(response);
+		when(chatModel.stream(any(Prompt.class))).thenReturn(Flux.just(response));
 	}
 
 	/**
@@ -82,14 +85,14 @@ class OrderAgentIntegrationTest {
 	}
 
 	/**
-	 * Verifies {@link A2ATransport#send} sends a message through the full A2A stack and
-	 * returns the agent's text response.
+	 * Verifies {@link A2ATransport#sendStream} sends a message through the full A2A
+	 * streaming stack and returns the agent's text response.
 	 */
 	@Test
 	void send_returnsAgentResponse() {
 		Message message = A2A.toUserMessage("회원 user-1의 주문 목록 조회해줘");
 
-		String result = A2ATransport.send(agentCard, message);
+		String result = A2ATransport.sendStream(agentCard, message);
 
 		assertThat(result).isEqualTo(MOCK_RESPONSE);
 	}

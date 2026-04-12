@@ -2,18 +2,24 @@ package io.github.cokelee777.agent.host.invocation;
 
 import io.github.cokelee777.a2a.agent.common.autoconfigure.RemoteAgentCardRegistry;
 import io.github.cokelee777.a2a.model.chat.memory.repository.bedrock.agentcore.AdvancedBedrockAgentCoreChatMemoryRepository;
-import lombok.RequiredArgsConstructor;
+import io.github.cokelee777.agent.host.remote.RemoteAgentTools;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.ai.chat.client.ChatClient;
 import org.springframework.ai.chat.memory.ChatMemoryRepository;
 import org.springframework.ai.chat.messages.AssistantMessage;
 import org.springframework.ai.chat.messages.Message;
 import org.springframework.ai.chat.messages.UserMessage;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.stereotype.Service;
 import org.springframework.util.Assert;
+import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
+import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicReference;
 
 /**
  * Default implementation of {@link InvocationService}.
@@ -44,8 +50,8 @@ import java.util.Objects;
  * per call behave correctly.
  * </p>
  */
+@Slf4j
 @Service
-@RequiredArgsConstructor
 public class DefaultInvocationService implements InvocationService {
 
 	private static final String ROUTING_SYSTEM_PROMPT = """
@@ -73,9 +79,20 @@ public class DefaultInvocationService implements InvocationService {
 
 	private final ChatClient chatClient;
 
+	private final ChatClient streamingChatClient;
+
 	private final RemoteAgentCardRegistry remoteAgentCardRegistry;
 
 	private final ChatMemoryRepository chatMemoryRepository;
+
+	public DefaultInvocationService(@Qualifier("chatClient") ChatClient chatClient,
+			@Qualifier("streamingChatClient") ChatClient streamingChatClient,
+			RemoteAgentCardRegistry remoteAgentCardRegistry, ChatMemoryRepository chatMemoryRepository) {
+		this.chatClient = chatClient;
+		this.streamingChatClient = streamingChatClient;
+		this.remoteAgentCardRegistry = remoteAgentCardRegistry;
+		this.chatMemoryRepository = chatMemoryRepository;
+	}
 
 	@Override
 	public InvocationResponse invoke(InvocationRequest request) {
@@ -93,13 +110,15 @@ public class DefaultInvocationService implements InvocationService {
 			history = this.chatMemoryRepository.findByConversationId(conversationId);
 		}
 
+		RemoteAgentTools tools = new RemoteAgentTools(remoteAgentCardRegistry);
 		String response = chatClient.prompt()
 			.system(ROUTING_SYSTEM_PROMPT.formatted(remoteAgentCardRegistry.getAgentDescriptions()))
+			.tools(tools)
 			.messages(history)
 			.user(prompt)
 			.call()
 			.content();
-		String content = Objects.requireNonNullElse(response, "");
+		String content = filterThinkingTags(Objects.requireNonNullElse(response, ""));
 
 		List<Message> messages = new ArrayList<>(history);
 		messages.add(new UserMessage(prompt));
@@ -112,6 +131,167 @@ public class DefaultInvocationService implements InvocationService {
 		}
 
 		return new InvocationResponse(content, actorId, conversationId);
+	}
+
+	@Override
+	public void invokeStream(InvocationRequest request, SseEmitter emitter) {
+		Assert.notNull(request, "request must not be null");
+
+		String prompt = request.prompt();
+		String actorId = request.actorId();
+		String conversationId = request.conversationId();
+
+		List<Message> history;
+		if (this.chatMemoryRepository instanceof AdvancedBedrockAgentCoreChatMemoryRepository advanced) {
+			history = advanced.findByConversationId(actorId, conversationId);
+		}
+		else {
+			history = this.chatMemoryRepository.findByConversationId(conversationId);
+		}
+
+		RemoteAgentTools tools = new RemoteAgentTools(remoteAgentCardRegistry, emitter);
+		StringBuilder accumulated = new StringBuilder();
+		AtomicBoolean inThinking = new AtomicBoolean(false);
+		AtomicReference<StringBuilder> pendingBuffer = new AtomicReference<>(new StringBuilder());
+
+		this.streamingChatClient.prompt()
+			.system(ROUTING_SYSTEM_PROMPT.formatted(remoteAgentCardRegistry.getAgentDescriptions()))
+			.tools(tools)
+			.messages(history)
+			.user(prompt)
+			.stream()
+			.content()
+			.doOnNext(token -> {
+				String safe = processStreamToken(token, inThinking, pendingBuffer);
+				if (!safe.isEmpty()) {
+					accumulated.append(safe);
+					try {
+						emitter.send(SseEmitter.event().name("token").data(safe));
+					}
+					catch (IOException e) {
+						throw new RuntimeException("Client disconnected", e);
+					}
+				}
+			})
+			.doOnComplete(() -> {
+				// Flush any buffered content that was held for tag detection
+				String remaining = filterThinkingTags(pendingBuffer.get().toString());
+				if (!remaining.isEmpty()) {
+					accumulated.append(remaining);
+					try {
+						emitter.send(SseEmitter.event().name("token").data(remaining));
+					}
+					catch (IOException e) {
+						log.warn("Failed to send remaining tokens on complete", e);
+					}
+				}
+				try {
+					String content = accumulated.toString();
+					List<Message> messages = new ArrayList<>(history);
+					messages.add(new UserMessage(prompt));
+					messages.add(new AssistantMessage(content));
+					if (this.chatMemoryRepository instanceof AdvancedBedrockAgentCoreChatMemoryRepository advanced) {
+						advanced.saveAll(actorId, conversationId, messages);
+					}
+					else {
+						this.chatMemoryRepository.saveAll(conversationId, messages);
+					}
+				}
+				catch (Exception e) {
+					log.error("Failed to persist conversation history", e);
+				}
+				finally {
+					emitter.complete();
+				}
+			})
+			.doOnError(e -> {
+				log.error("Error during streaming invocation", e);
+				emitter.completeWithError(e);
+			})
+			.subscribe();
+	}
+
+	/**
+	 * Strips all {@code <thinking>...</thinking>} blocks from a completed response
+	 * string.
+	 */
+	private static String filterThinkingTags(String content) {
+		if (content.isEmpty()) {
+			return "";
+		}
+		return content.replaceAll("(?s)<thinking>.*?</thinking>\\s*", "").trim();
+	}
+
+	/**
+	 * Processes a single stream token through a stateful {@code <thinking>} tag filter.
+	 * Buffers partial tag boundaries so that tags split across token boundaries are
+	 * handled correctly. Returns only the content that is safe to emit (outside thinking
+	 * blocks).
+	 */
+	private static String processStreamToken(String token, AtomicBoolean inThinking,
+			AtomicReference<StringBuilder> buffer) {
+		buffer.get().append(token);
+		String current = buffer.get().toString();
+		StringBuilder emit = new StringBuilder();
+
+		while (!current.isEmpty()) {
+			if (inThinking.get()) {
+				int endIdx = current.indexOf("</thinking>");
+				if (endIdx >= 0) {
+					current = current.substring(endIdx + "</thinking>".length());
+					// Strip leading whitespace after closing tag
+					int ws = 0;
+					while (ws < current.length() && Character.isWhitespace(current.charAt(ws))) {
+						ws++;
+					}
+					current = current.substring(ws);
+					inThinking.set(false);
+				}
+				else {
+					// End tag not yet received — keep buffering
+					buffer.set(new StringBuilder(current));
+					return emit.toString();
+				}
+			}
+			else {
+				int startIdx = current.indexOf("<thinking>");
+				if (startIdx >= 0) {
+					emit.append(current, 0, startIdx);
+					current = current.substring(startIdx + "<thinking>".length());
+					inThinking.set(true);
+				}
+				else {
+					// No complete start tag — hold back enough chars for a partial match
+					int safeLen = safeEmitLength(current);
+					emit.append(current, 0, safeLen);
+					current = current.substring(safeLen);
+					buffer.set(new StringBuilder(current));
+					return emit.toString();
+				}
+			}
+		}
+		buffer.set(new StringBuilder(current));
+		return emit.toString();
+	}
+
+	/**
+	 * Returns the number of characters in {@code s} that can be safely emitted without
+	 * risking cutting off the start of a {@code <thinking>} or {@code </thinking>} tag.
+	 */
+	private static int safeEmitLength(String s) {
+		// Hold back up to (tag length - 1) chars so a partial tag at the end stays
+		// buffered
+		int maxHold = "</thinking>".length() - 1; // 10 chars
+		if (s.length() <= maxHold) {
+			return 0;
+		}
+		for (int hold = maxHold; hold >= 1; hold--) {
+			String suffix = s.substring(s.length() - hold);
+			if ("<thinking>".startsWith(suffix) || "</thinking>".startsWith(suffix)) {
+				return s.length() - hold;
+			}
+		}
+		return s.length();
 	}
 
 }

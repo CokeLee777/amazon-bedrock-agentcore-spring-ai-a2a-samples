@@ -122,6 +122,7 @@ class DefaultInvocationServiceTest {
 		when(remoteAgentCardRegistry.getAgentDescriptions()).thenReturn("");
 		when(chatClient.prompt()).thenReturn(requestSpec);
 		when(requestSpec.system(anyString())).thenReturn(requestSpec);
+		when(requestSpec.tools(any())).thenReturn(requestSpec);
 		when(requestSpec.messages(anyList())).thenReturn(requestSpec);
 		when(requestSpec.user(anyString())).thenReturn(requestSpec);
 		when(requestSpec.call()).thenThrow(new RuntimeException("LLM error"));
@@ -133,12 +134,13 @@ class DefaultInvocationServiceTest {
 	}
 
 	private DefaultInvocationService service() {
-		return new DefaultInvocationService(chatClient, remoteAgentCardRegistry, chatMemoryRepository);
+		return new DefaultInvocationService(chatClient, chatClient, remoteAgentCardRegistry, chatMemoryRepository);
 	}
 
 	private void setupChatClientChain(String content) {
 		when(chatClient.prompt()).thenReturn(requestSpec);
 		when(requestSpec.system(anyString())).thenReturn(requestSpec);
+		when(requestSpec.tools(any())).thenReturn(requestSpec);
 		when(requestSpec.messages(anyList())).thenReturn(requestSpec);
 		when(requestSpec.user(anyString())).thenReturn(requestSpec);
 		when(requestSpec.call()).thenReturn(callSpec);

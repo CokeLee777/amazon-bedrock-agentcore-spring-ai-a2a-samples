@@ -1,16 +1,17 @@
 package io.github.cokelee777.a2a.integrationtests.samples;
 
+import io.github.cokelee777.a2a.agent.common.autoconfigure.RemoteAgentCardRegistry;
 import io.github.cokelee777.agent.host.HostAgentApplication;
-import io.github.cokelee777.agent.host.remote.RemoteAgentTools;
 import io.github.cokelee777.agent.host.remote.RemoteAgentDelegationRequest;
+import io.github.cokelee777.agent.host.remote.RemoteAgentTools;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
+import org.springframework.ai.chat.messages.AssistantMessage;
 import org.springframework.ai.chat.messages.MessageType;
 import org.springframework.ai.chat.model.ChatModel;
 import org.springframework.ai.chat.model.ChatResponse;
 import org.springframework.ai.chat.model.Generation;
-import org.springframework.ai.chat.messages.AssistantMessage;
 import org.springframework.ai.chat.prompt.Prompt;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -49,7 +50,7 @@ class HostAgentIntegrationTest {
 	ChatModel chatModel;
 
 	@Autowired
-	RemoteAgentTools remoteAgentTools;
+	RemoteAgentCardRegistry remoteAgentCardRegistry;
 
 	@BeforeEach
 	void setupChatModelMock() {
@@ -116,8 +117,8 @@ class HostAgentIntegrationTest {
 	 */
 	@Test
 	void delegateToRemoteAgent_unknownAgent_returnsErrorMessage() {
-		String result = remoteAgentTools
-			.delegateToRemoteAgent(new RemoteAgentDelegationRequest("Unknown Agent", "some task"));
+		RemoteAgentTools tools = new RemoteAgentTools(remoteAgentCardRegistry);
+		String result = tools.delegateToRemoteAgent(new RemoteAgentDelegationRequest("Unknown Agent", "some task"));
 
 		assertThat(result).contains("Agent 'Unknown Agent' not found");
 		assertThat(result).contains("Available agents:");

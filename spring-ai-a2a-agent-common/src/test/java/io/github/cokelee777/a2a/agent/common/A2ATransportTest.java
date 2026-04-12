@@ -19,6 +19,13 @@ import static org.assertj.core.api.Assertions.assertThat;
  * The success path (task completion with text artifacts) requires a live A2A server and
  * is covered by integration tests. These unit tests focus on error-handling behavior.
  * </p>
+ * <p>
+ * Note: {@code sendStream} connection-refused tests are omitted because the A2A SDK's
+ * {@code JdkA2AHttpClient} does not propagate TCP-level failures (e.g. connection
+ * refused) to the SSE error handler — the failure is silently dropped inside
+ * {@code asyncRequest}, so the future only resolves after the 60-second timeout. This is
+ * an SDK limitation; the happy-path streaming behavior is covered by integration tests.
+ * </p>
  */
 class A2ATransportTest {
 

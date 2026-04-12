@@ -5,13 +5,14 @@ import io.a2a.spec.AgentCard;
 import io.a2a.spec.Message;
 import io.github.cokelee777.a2a.agent.common.A2ATransport;
 import io.github.cokelee777.a2a.agent.common.autoconfigure.RemoteAgentCardRegistry;
-import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.jspecify.annotations.Nullable;
 import org.springframework.ai.tool.annotation.Tool;
 import org.springframework.ai.tool.annotation.ToolParam;
-import org.springframework.stereotype.Component;
 import org.springframework.util.Assert;
+import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
@@ -20,9 +21,8 @@ import java.util.concurrent.Executors;
 import java.util.stream.Collectors;
 
 /**
- * Spring {@link Component} that registers the host's downstream A2A agents as Spring AI
- * {@link Tool}-annotated methods, routing orchestration calls over JSON-RPC via
- * {@link A2ATransport}.
+ * Provides the host's downstream A2A agents as Spring AI {@link Tool}-annotated methods,
+ * routing orchestration calls over JSON-RPC via {@link A2ATransport}.
  *
  * <p>
  * Each configured URL
@@ -33,8 +33,9 @@ import java.util.stream.Collectors;
  * </p>
  *
  * <p>
- * Downstream descriptions for the orchestrator system prompt come from
- * {@link RemoteAgentCardRegistry#getAgentDescriptions()} (see invocation layer).
+ * Instances are created per-request by the invocation layer. When an {@link SseEmitter}
+ * is supplied, progress events ({@code event: progress}) are sent to the client before
+ * each downstream call. Pass {@code null} for non-streaming (blocking) invocations.
  * </p>
  *
  * <p>
@@ -43,17 +44,8 @@ import java.util.stream.Collectors;
  * {@link #delegateToRemoteAgentsParallel} blocks until every delegated call finishes
  * (each runs on a virtual thread).
  * </p>
- *
- * <p>
- * Instances are safe for concurrent use; the registry uses a concurrent map and
- * {@link io.github.cokelee777.a2a.agent.common.LazyAgentCard} coordinates resolution per
- * URL.
- * </p>
- *
  */
 @Slf4j
-@Component
-@RequiredArgsConstructor
 public class RemoteAgentTools {
 
 	/**
@@ -65,14 +57,36 @@ public class RemoteAgentTools {
 
 	private final RemoteAgentCardRegistry remoteAgentCardRegistry;
 
+	@Nullable private final SseEmitter emitter;
+
+	/**
+	 * Creates a non-streaming instance without progress emission.
+	 * @param remoteAgentCardRegistry registry for downstream agent cards
+	 */
+	public RemoteAgentTools(RemoteAgentCardRegistry remoteAgentCardRegistry) {
+		this(remoteAgentCardRegistry, null);
+	}
+
+	/**
+	 * Creates a streaming instance that emits {@code progress} SSE events before each
+	 * downstream call.
+	 * @param remoteAgentCardRegistry registry for downstream agent cards
+	 * @param emitter SSE emitter to send progress events to, or {@code null} to skip
+	 */
+	public RemoteAgentTools(RemoteAgentCardRegistry remoteAgentCardRegistry, @Nullable SseEmitter emitter) {
+		this.remoteAgentCardRegistry = remoteAgentCardRegistry;
+		this.emitter = emitter;
+	}
+
 	/**
 	 * Sends one user message derived from {@link RemoteAgentDelegationRequest#task()} to
 	 * the agent whose {@link AgentCard#name()} equals
 	 * {@link RemoteAgentDelegationRequest#agentName()}.
 	 *
 	 * <p>
-	 * Resolves the card via {@link RemoteAgentCardRegistry#findCardByAgentName(String)}.
-	 * Blocks until {@link A2ATransport#send(AgentCard, Message)} completes or fails.
+	 * Emits a {@code progress} SSE event before the call when an emitter is present.
+	 * Blocks until {@link A2ATransport#sendStream(AgentCard, Message)} completes or
+	 * fails.
 	 * </p>
 	 * @param request non-null delegation target and task text
 	 * @return downstream text, or a short English error line from
@@ -91,8 +105,9 @@ public class RemoteAgentTools {
 			return unknownAgentMessage(agentName);
 		}
 
+		sendProgress("Calling " + agentName + "...");
 		Message message = A2A.toUserMessage(task);
-		return A2ATransport.send(agentCard, message);
+		return A2ATransport.sendStream(agentCard, message);
 	}
 
 	/**
@@ -146,6 +161,23 @@ public class RemoteAgentTools {
 			out.append("[%d] agent: %s%nresponse:%n%s%n%n".formatted(i + 1, name, body));
 		}
 		return out.toString().trim();
+	}
+
+	/**
+	 * Emits a {@code progress} SSE event to the client. No-op when no emitter is present
+	 * or the client has already disconnected.
+	 * @param message progress text to send
+	 */
+	private void sendProgress(String message) {
+		if (emitter == null) {
+			return;
+		}
+		try {
+			emitter.send(SseEmitter.event().name("progress").data(message));
+		}
+		catch (IOException e) {
+			log.warn("Client disconnected during progress emit: {}", message);
+		}
 	}
 
 }

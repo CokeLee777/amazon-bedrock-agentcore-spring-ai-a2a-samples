@@ -45,7 +45,7 @@ public class DeliveryAgentClient {
 
 		return lazyCard.get().map(card -> {
 			Message message = A2A.toAgentMessage(task);
-			return A2ATransport.send(card, message);
+			return A2ATransport.sendStream(card, message);
 		}).orElse("배송 에이전트에 연결할 수 없습니다.");
 	}
 

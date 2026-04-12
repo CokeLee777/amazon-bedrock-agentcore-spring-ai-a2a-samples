@@ -10,6 +10,7 @@ spring:
         chat:
           options:
             model: ${BEDROCK_MODEL_ID:}
+            max-tokens: ${BEDROCK_MAX_TOKENS:8096}
     a2a:
       server:
         enabled: true

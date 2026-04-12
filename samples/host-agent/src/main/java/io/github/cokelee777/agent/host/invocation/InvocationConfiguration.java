@@ -1,34 +1,53 @@
 package io.github.cokelee777.agent.host.invocation;
 
-import io.github.cokelee777.agent.host.remote.RemoteAgentTools;
 import org.springframework.ai.chat.client.ChatClient;
 import org.springframework.ai.chat.client.advisor.SimpleLoggerAdvisor;
-import org.springframework.ai.tool.annotation.Tool;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
+import java.util.concurrent.Executor;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ThreadFactory;
+
 /**
- * Spring configuration for the orchestrator {@link ChatClient} used on the invocation
- * path.
+ * Registers the blocking and streaming {@link ChatClient} beans for the invocation path.
  *
  * <p>
- * Registers downstream A2A agents as default tools and attaches advisors. Autowired
- * {@link ChatClient.Builder} comes from Spring AI auto-configuration.
+ * Tools ({@link io.github.cokelee777.agent.host.remote.RemoteAgentTools}) are NOT
+ * registered as defaults here; they are created per-request by
+ * {@link DefaultInvocationService} so that a streaming-aware instance (with an
+ * {@link org.springframework.web.servlet.mvc.method.annotation.SseEmitter}) can be
+ * supplied for SSE calls and a plain instance for blocking calls.
  * </p>
  */
 @Configuration
 public class InvocationConfiguration {
 
+	/** Blocking ChatClient for {@code POST /invocations} (non-SSE). */
+	@Bean
+	@Qualifier("chatClient")
+	public ChatClient chatClient(ChatClient.Builder builder) {
+		return builder.clone().defaultAdvisors(new SimpleLoggerAdvisor()).build();
+	}
+
 	/**
-	 * Builds the routing {@link ChatClient} with downstream A2A agents registered as
-	 * tools.
-	 * @param builder the Spring AI autoconfigured builder
-	 * @param remoteAgentTools the downstream agent {@link Tool} component
-	 * @return the configured {@link ChatClient}
+	 * Streaming ChatClient for {@code POST /invocations} with
+	 * {@code Accept: text/event-stream}.
 	 */
 	@Bean
-	public ChatClient chatClient(ChatClient.Builder builder, RemoteAgentTools remoteAgentTools) {
-		return builder.clone().defaultTools(remoteAgentTools).defaultAdvisors(new SimpleLoggerAdvisor()).build();
+	@Qualifier("streamingChatClient")
+	public ChatClient streamingChatClient(ChatClient.Builder builder) {
+		return builder.clone().defaultAdvisors(new SimpleLoggerAdvisor()).build();
+	}
+
+	/**
+	 * Provide executor for sse using virtual threads.
+	 */
+	@Bean
+	public Executor sseEmitterTaskExecutor() {
+		ThreadFactory factory = Thread.ofVirtual().name("sse-emitter-task", 1).factory();
+		return Executors.newThreadPerTaskExecutor(factory);
 	}
 
 }

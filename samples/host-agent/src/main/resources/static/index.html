@@ -1,0 +1,248 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Host Agent Chat</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+  <style>
+    /* Markdown rendered inside assistant bubbles */
+    .prose p { margin-bottom: 0.5rem; }
+    .prose ul { list-style: disc; padding-left: 1.25rem; margin-bottom: 0.5rem; }
+    .prose ol { list-style: decimal; padding-left: 1.25rem; margin-bottom: 0.5rem; }
+    .prose code { background: #e5e7eb; border-radius: 3px; padding: 1px 4px; font-size: 0.85em; }
+    .prose pre { background: #1f2937; color: #f9fafb; border-radius: 6px; padding: 0.75rem; overflow-x: auto; margin-bottom: 0.5rem; }
+    .prose pre code { background: none; padding: 0; }
+    .prose strong { font-weight: 600; }
+    html, body { height: 100%; }
+
+    /* Animated ellipsis: text::after cycles through "", ".", "..", "..." */
+    @keyframes ellipsis {
+      0%   { content: ''; }
+      25%  { content: '.'; }
+      50%  { content: '..'; }
+      75%  { content: '...'; }
+    }
+    .anim-ellipsis::after {
+      content: '';
+      animation: ellipsis 1.2s steps(1, end) infinite;
+    }
+  </style>
+</head>
+<body class="bg-gray-100 flex flex-col h-full">
+
+  <!-- Header -->
+  <header class="bg-white border-b border-gray-200 px-4 py-3 shadow-sm flex-shrink-0">
+    <h1 class="text-lg font-semibold text-gray-800">Host Agent Chat</h1>
+    <p id="session-info" class="text-xs text-gray-400 mt-0.5"></p>
+  </header>
+
+  <!-- Chat area -->
+  <main id="chat-container" class="flex-1 overflow-y-auto px-4 py-4 space-y-4">
+    <!-- Messages are appended here by JS -->
+  </main>
+
+  <!-- Input area -->
+  <footer class="bg-white border-t border-gray-200 px-4 py-3 flex-shrink-0">
+    <div class="flex gap-2 items-end max-w-4xl mx-auto">
+      <textarea
+        id="prompt-input"
+        rows="2"
+        placeholder="메시지를 입력하세요... (Enter: 전송, Shift+Enter: 줄바꿈)"
+        class="flex-1 resize-none rounded-xl border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400"
+      ></textarea>
+      <button
+        id="send-btn"
+        class="bg-blue-500 hover:bg-blue-600 disabled:bg-blue-300 text-white rounded-xl px-4 py-2 text-sm font-medium transition-colors flex items-center gap-1.5"
+      >
+        <span id="send-label">전송</span>
+        <svg id="send-spinner" class="hidden animate-spin h-4 w-4" viewBox="0 0 24 24" fill="none">
+          <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/>
+          <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z"/>
+        </svg>
+      </button>
+    </div>
+  </footer>
+
+  <script>
+    // ── Session IDs ──────────────────────────────────────────────────────────
+    const actorId = crypto.randomUUID();
+    const conversationId = crypto.randomUUID();
+    document.getElementById('session-info').textContent =
+      `actorId: ${actorId.slice(0, 8)}…  conversationId: ${conversationId.slice(0, 8)}…`;
+
+    // ── DOM refs ─────────────────────────────────────────────────────────────
+    const chatContainer = document.getElementById('chat-container');
+    const promptInput   = document.getElementById('prompt-input');
+    const sendBtn       = document.getElementById('send-btn');
+    const sendLabel     = document.getElementById('send-label');
+    const sendSpinner   = document.getElementById('send-spinner');
+
+    // ── Helpers ──────────────────────────────────────────────────────────────
+    function setLoading(on) {
+      sendBtn.disabled = on;
+      sendLabel.textContent = on ? '' : '전송';
+      sendSpinner.classList.toggle('hidden', !on);
+      promptInput.disabled = on;
+    }
+
+    function scrollToBottom() {
+      chatContainer.scrollTop = chatContainer.scrollHeight;
+    }
+
+    function addUserBubble(text) {
+      const el = document.createElement('div');
+      el.className = 'flex justify-end';
+      el.innerHTML = `
+        <div class="max-w-[75%] bg-blue-500 text-white rounded-2xl rounded-br-sm px-4 py-2.5 text-sm whitespace-pre-wrap">${escapeHtml(text)}</div>
+      `;
+      chatContainer.appendChild(el);
+      scrollToBottom();
+    }
+
+    function addAssistantBubble() {
+      const wrapper = document.createElement('div');
+      wrapper.className = 'flex justify-start';
+      const bubble = document.createElement('div');
+      bubble.className = 'max-w-[75%] bg-white border border-gray-200 rounded-2xl rounded-bl-sm px-4 py-2.5 text-sm text-gray-800 shadow-sm';
+      wrapper.appendChild(bubble);
+      chatContainer.appendChild(wrapper);
+      scrollToBottom();
+      return bubble;
+    }
+
+    function escapeHtml(str) {
+      return str.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+    }
+
+    // ── SSE streaming via fetch ───────────────────────────────────────────────
+    async function streamInvocation(prompt) {
+      setLoading(true);
+      addUserBubble(prompt);
+
+      const bubble = addAssistantBubble();
+      bubble.innerHTML = '<span class="text-gray-400 italic text-xs anim-ellipsis">생각 중</span>';
+
+      let accumulated = '';
+      let hasTokens = false;
+      let currentEvent = '';
+      let currentData = null;
+      let buffer = '';
+
+      try {
+        const response = await fetch('/invocations', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Accept': 'text/event-stream',
+          },
+          body: JSON.stringify({ prompt, actorId, conversationId }),
+        });
+
+        if (!response.ok) {
+          throw new Error(`서버 오류: ${response.status}`);
+        }
+
+        const reader = response.body.getReader();
+        const decoder = new TextDecoder();
+
+        // Dispatch a buffered SSE event (called on each blank line)
+        function dispatchSseEvent() {
+          if (currentEvent === 'progress' && currentData !== null) {
+            if (!hasTokens) {
+              bubble.innerHTML = `<span class="text-gray-400 italic text-xs anim-ellipsis">⚙ ${escapeHtml(currentData.replace(/\.+$/, ''))}</span>`;
+              scrollToBottom();
+            }
+          } else if (currentEvent === 'token' && currentData !== null) {
+            accumulated += currentData;
+            hasTokens = true;
+            bubble.textContent = accumulated;
+            scrollToBottom();
+          }
+          currentEvent = '';
+          currentData = null;
+        }
+
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) {
+            // Flush TextDecoder internal state for multi-byte chars
+            buffer += decoder.decode();
+            // Normalize CRLF → LF, then dispatch any remaining buffered event
+            buffer = buffer.replace(/\r\n/g, '\n').replace(/\r/g, '\n');
+            if (buffer) {
+              // Treat end-of-stream as an implicit event boundary
+              const finalLines = buffer.split('\n');
+              for (const line of finalLines) {
+                if (line === '') {
+                  dispatchSseEvent();
+                } else if (line.startsWith('event:')) {
+                  currentEvent = line.slice(6).trim();
+                } else if (line.startsWith('data:')) {
+                  const raw = line.slice(5);
+                  const dataValue = raw.startsWith(' ') ? raw.slice(1) : raw;
+                  currentData = currentData === null ? dataValue : currentData + '\n' + dataValue;
+                }
+              }
+              dispatchSseEvent(); // flush any final pending event
+            }
+            break;
+          }
+
+          // Normalize CRLF → LF before splitting
+          buffer += decoder.decode(value, { stream: true }).replace(/\r\n/g, '\n').replace(/\r/g, '\n');
+          const lines = buffer.split('\n');
+          buffer = lines.pop(); // keep last (possibly incomplete) line
+
+          for (const line of lines) {
+            if (line === '') {
+              // Blank line = SSE event boundary: dispatch and reset
+              dispatchSseEvent();
+            } else if (line.startsWith('event:')) {
+              currentEvent = line.slice(6).trim();
+            } else if (line.startsWith('data:')) {
+              // SSE spec: strip at most one leading space after 'data:'
+              const raw = line.slice(5);
+              const dataValue = raw.startsWith(' ') ? raw.slice(1) : raw;
+              // Multiple data: lines in one event are joined with '\n'
+              currentData = currentData === null ? dataValue : currentData + '\n' + dataValue;
+            }
+          }
+        }
+
+        // Stream complete — render final markdown
+        if (accumulated) {
+          bubble.innerHTML = `<div class="prose">${marked.parse(accumulated)}</div>`;
+        } else {
+          bubble.textContent = '응답이 없습니다.';
+        }
+
+      } catch (err) {
+        bubble.innerHTML = `<span class="text-red-500 text-xs">오류: ${escapeHtml(err.message)}</span>`;
+      } finally {
+        setLoading(false);
+        scrollToBottom();
+      }
+    }
+
+    // ── Input handling ────────────────────────────────────────────────────────
+    sendBtn.addEventListener('click', () => {
+      const prompt = promptInput.value.trim();
+      if (!prompt) return;
+      promptInput.value = '';
+      streamInvocation(prompt);
+    });
+
+    promptInput.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter' && !e.shiftKey) {
+        e.preventDefault();
+        sendBtn.click();
+      }
+    });
+
+    // Focus input on load
+    promptInput.focus();
+  </script>
+</body>
+</html>
