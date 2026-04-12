@@ -21,6 +21,7 @@ import lombok.extern.slf4j.Slf4j;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.BiConsumer;
 
 /**
@@ -49,18 +50,16 @@ public class A2ATransport {
 	 */
 	public static String send(AgentCard agentCard, Message message) {
 		try {
-			// Use CompletableFuture to wait for the response
-			CompletableFuture<String> responseFuture = new CompletableFuture<>();
+			AtomicReference<String> result = new AtomicReference<>("");
 			BiConsumer<ClientEvent, AgentCard> consumer = (event, card) -> {
 				if (event instanceof TaskEvent taskEvent) {
 					Task task = taskEvent.getTask();
 					log.debug("Received task response: status={}", task.getStatus().state());
 
 					if (TaskState.FAILED.equals(task.getStatus().state())) {
-						responseFuture.complete("");
 						return;
 					}
-					responseFuture.complete(TextExtractor.extractTextFromTask(task));
+					result.set(TextExtractor.extractTextFromTask(task));
 				}
 			};
 
@@ -74,10 +73,8 @@ public class A2ATransport {
 
 			client.sendMessage(message);
 
-			// Wait for response (with timeout)
-			String result = responseFuture.get(60, TimeUnit.SECONDS);
-			log.debug("Agent '{}' response: {}", agentCard.name(), result);
-			return result;
+			log.debug("Agent '{}' response: {}", agentCard.name(), result.get());
+			return result.get();
 		}
 		catch (Exception e) {
 			log.error("Error sending message to agent '{}': {}", agentCard.name(), e.getMessage());
