@@ -14,7 +14,6 @@ import io.a2a.spec.TaskStatusUpdateEvent;
 import io.a2a.spec.TextPart;
 import io.github.cokelee777.a2a.server.support.A2AServerTestFixtures;
 import org.junit.jupiter.api.Test;
-import org.springframework.ai.chat.client.ChatClient;
 
 import java.io.IOException;
 import java.io.UncheckedIOException;
@@ -25,7 +24,6 @@ import java.util.Set;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
-import static org.mockito.Mockito.mock;
 
 /**
  * Tests for {@link DefaultAgentExecutor} task lifecycle and cancellation rules.
@@ -40,8 +38,7 @@ class DefaultAgentExecutorTest {
 		EventQueue queue = eventQueue("task-1", events);
 		try {
 			RequestContext ctx = new RequestContext(null, "task-1", "ctx-1", null, null, this.callContext);
-			ChatClient chatClient = mock(ChatClient.class);
-			DefaultAgentExecutor executor = new DefaultAgentExecutor(chatClient, (c, rc) -> "hello");
+			DefaultAgentExecutor executor = new DefaultAgentExecutor(rc -> "hello");
 			executor.execute(ctx, queue);
 		}
 		finally {
@@ -62,8 +59,7 @@ class DefaultAgentExecutorTest {
 		EventQueue queue = eventQueue("task-1", events);
 		try {
 			RequestContext ctx = new RequestContext(null, "task-1", "ctx-1", existing, null, this.callContext);
-			ChatClient chatClient = mock(ChatClient.class);
-			DefaultAgentExecutor executor = new DefaultAgentExecutor(chatClient, (c, rc) -> "x");
+			DefaultAgentExecutor executor = new DefaultAgentExecutor(rc -> "x");
 			executor.execute(ctx, queue);
 		}
 		finally {
@@ -80,8 +76,7 @@ class DefaultAgentExecutorTest {
 		EventQueue queue = eventQueue("task-1", events);
 		try {
 			RequestContext ctx = new RequestContext(null, "task-1", "ctx-1", existing, null, this.callContext);
-			ChatClient chatClient = mock(ChatClient.class);
-			DefaultAgentExecutor executor = new DefaultAgentExecutor(chatClient, (c, rc) -> "x");
+			DefaultAgentExecutor executor = new DefaultAgentExecutor(rc -> "x");
 			executor.execute(ctx, queue);
 		}
 		finally {
@@ -98,8 +93,7 @@ class DefaultAgentExecutorTest {
 		EventQueue queue = eventQueue("task-1", events);
 		try {
 			RequestContext ctx = new RequestContext(null, "task-1", "ctx-1", null, null, this.callContext);
-			ChatClient chatClient = mock(ChatClient.class);
-			DefaultAgentExecutor executor = new DefaultAgentExecutor(chatClient, (c, rc) -> null);
+			DefaultAgentExecutor executor = new DefaultAgentExecutor(rc -> null);
 			executor.execute(ctx, queue);
 		}
 		finally {
@@ -117,8 +111,7 @@ class DefaultAgentExecutorTest {
 		EventQueue queue = eventQueue("task-1", events);
 		try {
 			RequestContext ctx = new RequestContext(null, "task-1", "ctx-1", null, null, this.callContext);
-			ChatClient chatClient = mock(ChatClient.class);
-			DefaultAgentExecutor executor = new DefaultAgentExecutor(chatClient, (c, rc) -> "");
+			DefaultAgentExecutor executor = new DefaultAgentExecutor(rc -> "");
 			executor.execute(ctx, queue);
 		}
 		finally {
@@ -134,9 +127,8 @@ class DefaultAgentExecutorTest {
 		EventQueue queue = eventQueue("task-1", new ArrayList<>());
 		try {
 			RequestContext ctx = new RequestContext(null, "task-1", "ctx-1", null, null, this.callContext);
-			ChatClient chatClient = mock(ChatClient.class);
 			JSONRPCError original = new JSONRPCError(-32001, "application error", null);
-			DefaultAgentExecutor executor = new DefaultAgentExecutor(chatClient, (c, rc) -> {
+			DefaultAgentExecutor executor = new DefaultAgentExecutor(rc -> {
 				throw original;
 			});
 			assertThatThrownBy(() -> executor.execute(ctx, queue)).isSameAs(original);
@@ -151,8 +143,7 @@ class DefaultAgentExecutorTest {
 		EventQueue queue = eventQueue("task-1", new ArrayList<>());
 		try {
 			RequestContext ctx = new RequestContext(null, "task-1", "ctx-1", null, null, this.callContext);
-			ChatClient chatClient = mock(ChatClient.class);
-			DefaultAgentExecutor executor = new DefaultAgentExecutor(chatClient, (c, rc) -> {
+			DefaultAgentExecutor executor = new DefaultAgentExecutor(rc -> {
 				throw new IllegalStateException("bad");
 			});
 			assertThatThrownBy(() -> executor.execute(ctx, queue)).isInstanceOf(JSONRPCError.class).satisfies(t -> {
@@ -171,8 +162,7 @@ class DefaultAgentExecutorTest {
 		EventQueue queue = eventQueue("task-1", new ArrayList<>());
 		try {
 			RequestContext ctx = new RequestContext(null, "task-1", "ctx-1", null, null, this.callContext);
-			ChatClient chatClient = mock(ChatClient.class);
-			DefaultAgentExecutor executor = new DefaultAgentExecutor(chatClient, (c, rc) -> {
+			DefaultAgentExecutor executor = new DefaultAgentExecutor(rc -> {
 				throw new UncheckedIOException("io failed", new IOException("root"));
 			});
 			assertThatThrownBy(() -> executor.execute(ctx, queue)).isInstanceOf(JSONRPCError.class).satisfies(t -> {
@@ -191,9 +181,8 @@ class DefaultAgentExecutorTest {
 		EventQueue queue = eventQueue("task-1", new ArrayList<>());
 		try {
 			RequestContext ctx = new RequestContext(null, "task-1", "ctx-1", null, null, this.callContext);
-			ChatClient chatClient = mock(ChatClient.class);
 			AssertionError err = new AssertionError("boom");
-			DefaultAgentExecutor executor = new DefaultAgentExecutor(chatClient, (c, rc) -> {
+			DefaultAgentExecutor executor = new DefaultAgentExecutor(rc -> {
 				throw err;
 			});
 			assertThatThrownBy(() -> executor.execute(ctx, queue)).isSameAs(err);
@@ -209,8 +198,7 @@ class DefaultAgentExecutorTest {
 		EventQueue queue = eventQueue("t1", new ArrayList<>());
 		try {
 			RequestContext ctx = new RequestContext(null, "t1", "c1", task, null, this.callContext);
-			ChatClient chatClient = mock(ChatClient.class);
-			DefaultAgentExecutor executor = new DefaultAgentExecutor(chatClient, (c, rc) -> "");
+			DefaultAgentExecutor executor = new DefaultAgentExecutor(rc -> "");
 			assertThatThrownBy(() -> executor.cancel(ctx, queue)).isInstanceOf(TaskNotCancelableError.class);
 		}
 		finally {
@@ -224,8 +212,7 @@ class DefaultAgentExecutorTest {
 		EventQueue queue = eventQueue("t1", new ArrayList<>());
 		try {
 			RequestContext ctx = new RequestContext(null, "t1", "c1", task, null, this.callContext);
-			ChatClient chatClient = mock(ChatClient.class);
-			DefaultAgentExecutor executor = new DefaultAgentExecutor(chatClient, (c, rc) -> "");
+			DefaultAgentExecutor executor = new DefaultAgentExecutor(rc -> "");
 			assertThatThrownBy(() -> executor.cancel(ctx, queue)).isInstanceOf(TaskNotCancelableError.class);
 		}
 		finally {
@@ -240,8 +227,7 @@ class DefaultAgentExecutorTest {
 		EventQueue queue = eventQueue("t1", events);
 		try {
 			RequestContext ctx = new RequestContext(null, "t1", "c1", task, null, this.callContext);
-			ChatClient chatClient = mock(ChatClient.class);
-			DefaultAgentExecutor executor = new DefaultAgentExecutor(chatClient, (c, rc) -> "");
+			DefaultAgentExecutor executor = new DefaultAgentExecutor(rc -> "");
 			executor.cancel(ctx, queue);
 		}
 		finally {
@@ -258,8 +244,7 @@ class DefaultAgentExecutorTest {
 		EventQueue queue = eventQueue("t1", events);
 		try {
 			RequestContext ctx = new RequestContext(null, "t1", "c1", task, null, this.callContext);
-			ChatClient chatClient = mock(ChatClient.class);
-			DefaultAgentExecutor executor = new DefaultAgentExecutor(chatClient, (c, rc) -> "");
+			DefaultAgentExecutor executor = new DefaultAgentExecutor(rc -> "");
 			executor.cancel(ctx, queue);
 		}
 		finally {
@@ -276,8 +261,7 @@ class DefaultAgentExecutorTest {
 		EventQueue queue = eventQueue("t1", events);
 		try {
 			RequestContext ctx = new RequestContext(null, "t1", "c1", task, null, this.callContext);
-			ChatClient chatClient = mock(ChatClient.class);
-			DefaultAgentExecutor executor = new DefaultAgentExecutor(chatClient, (c, rc) -> "");
+			DefaultAgentExecutor executor = new DefaultAgentExecutor(rc -> "");
 			executor.cancel(ctx, queue);
 		}
 		finally {

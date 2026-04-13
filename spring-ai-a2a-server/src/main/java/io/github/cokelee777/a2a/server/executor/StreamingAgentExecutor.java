@@ -11,7 +11,6 @@ import io.a2a.spec.TaskState;
 import io.a2a.spec.TextPart;
 import lombok.extern.slf4j.Slf4j;
 import org.jspecify.annotations.Nullable;
-import org.springframework.ai.chat.client.ChatClient;
 import reactor.core.Disposable;
 import reactor.core.Exceptions;
 import reactor.core.publisher.Flux;
@@ -32,14 +31,11 @@ import java.util.concurrent.atomic.AtomicReference;
 @Slf4j
 public class StreamingAgentExecutor implements AgentExecutor {
 
-	private final ChatClient chatClient;
-
 	private final StreamingChatClientExecutorHandler streamingHandler;
 
 	private final AtomicReference<@Nullable Disposable> activeStream = new AtomicReference<>();
 
-	public StreamingAgentExecutor(ChatClient chatClient, StreamingChatClientExecutorHandler streamingHandler) {
-		this.chatClient = chatClient;
+	public StreamingAgentExecutor(StreamingChatClientExecutorHandler streamingHandler) {
 		this.streamingHandler = streamingHandler;
 	}
 
@@ -57,7 +53,7 @@ public class StreamingAgentExecutor implements AgentExecutor {
 			}
 			updater.startWork();
 
-			Flux<String> chunks = this.streamingHandler.executeStream(this.chatClient, context);
+			Flux<String> chunks = this.streamingHandler.executeStream(context);
 			ChunkedTextArtifactEmitter artifactEmitter = new ChunkedTextArtifactEmitter(updater, null);
 			subscription = chunks.subscribe(artifactEmitter::onNext, e -> {
 				failure.compareAndSet(null, e);

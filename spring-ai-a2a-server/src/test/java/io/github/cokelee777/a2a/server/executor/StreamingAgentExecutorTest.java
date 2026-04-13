@@ -13,7 +13,6 @@ import io.a2a.spec.TaskStatusUpdateEvent;
 import io.a2a.spec.TextPart;
 import io.github.cokelee777.a2a.server.support.A2AServerTestFixtures;
 import org.junit.jupiter.api.Test;
-import org.springframework.ai.chat.client.ChatClient;
 import reactor.core.Exceptions;
 import reactor.core.publisher.Flux;
 
@@ -24,7 +23,6 @@ import java.util.Set;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
-import static org.mockito.Mockito.mock;
 
 /**
  * Tests for {@link StreamingAgentExecutor} task lifecycle and cancellation rules.
@@ -39,9 +37,7 @@ class StreamingAgentExecutorTest {
 		EventQueue queue = eventQueue("task-1", events);
 		try {
 			RequestContext ctx = new RequestContext(null, "task-1", "ctx-1", null, null, this.callContext);
-			ChatClient chatClient = mock(ChatClient.class);
-			StreamingAgentExecutor executor = new StreamingAgentExecutor(chatClient,
-					(c, rc) -> Flux.just("hello", " world"));
+			StreamingAgentExecutor executor = new StreamingAgentExecutor(rc -> Flux.just("hello", " world"));
 			executor.execute(ctx, queue);
 		}
 		finally {
@@ -63,8 +59,7 @@ class StreamingAgentExecutorTest {
 		EventQueue queue = eventQueue("task-1", events);
 		try {
 			RequestContext ctx = new RequestContext(null, "task-1", "ctx-1", existing, null, this.callContext);
-			ChatClient chatClient = mock(ChatClient.class);
-			StreamingAgentExecutor executor = new StreamingAgentExecutor(chatClient, (c, rc) -> Flux.just("x"));
+			StreamingAgentExecutor executor = new StreamingAgentExecutor(rc -> Flux.just("x"));
 			executor.execute(ctx, queue);
 		}
 		finally {
@@ -80,8 +75,7 @@ class StreamingAgentExecutorTest {
 		EventQueue queue = eventQueue("task-1", events);
 		try {
 			RequestContext ctx = new RequestContext(null, "task-1", "ctx-1", null, null, this.callContext);
-			StreamingAgentExecutor executor = new StreamingAgentExecutor(mock(ChatClient.class),
-					(c, rc) -> Flux.empty());
+			StreamingAgentExecutor executor = new StreamingAgentExecutor(rc -> Flux.empty());
 			executor.execute(ctx, queue);
 		}
 		finally {
@@ -99,8 +93,7 @@ class StreamingAgentExecutorTest {
 		EventQueue queue = eventQueue("task-1", events);
 		try {
 			RequestContext ctx = new RequestContext(null, "task-1", "ctx-1", null, null, this.callContext);
-			StreamingAgentExecutor executor = new StreamingAgentExecutor(mock(ChatClient.class),
-					(c, rc) -> Flux.error(Exceptions.failWithCancel()));
+			StreamingAgentExecutor executor = new StreamingAgentExecutor(rc -> Flux.error(Exceptions.failWithCancel()));
 			executor.execute(ctx, queue);
 		}
 		finally {
@@ -115,8 +108,8 @@ class StreamingAgentExecutorTest {
 		EventQueue queue = eventQueue("task-1", new ArrayList<>());
 		try {
 			RequestContext ctx = new RequestContext(null, "task-1", "ctx-1", null, null, this.callContext);
-			StreamingAgentExecutor executor = new StreamingAgentExecutor(mock(ChatClient.class),
-					(c, rc) -> Flux.error(new RuntimeException("stream error")));
+			StreamingAgentExecutor executor = new StreamingAgentExecutor(
+					rc -> Flux.error(new RuntimeException("stream error")));
 			assertThatThrownBy(() -> executor.execute(ctx, queue)).isInstanceOf(JSONRPCError.class).satisfies(t -> {
 				JSONRPCError e = (JSONRPCError) t;
 				assertThat(e.getCode()).isEqualTo(-32603);
@@ -134,8 +127,7 @@ class StreamingAgentExecutorTest {
 		EventQueue queue = eventQueue("task-1", events);
 		try {
 			RequestContext ctx = new RequestContext(null, "task-1", "ctx-1", null, null, this.callContext);
-			StreamingAgentExecutor executor = new StreamingAgentExecutor(mock(ChatClient.class),
-					(c, rc) -> Flux.just("only"));
+			StreamingAgentExecutor executor = new StreamingAgentExecutor(rc -> Flux.just("only"));
 			executor.execute(ctx, queue);
 		}
 		finally {
@@ -153,8 +145,7 @@ class StreamingAgentExecutorTest {
 		EventQueue queue = eventQueue("t1", new ArrayList<>());
 		try {
 			RequestContext ctx = new RequestContext(null, "t1", "c1", task, null, this.callContext);
-			StreamingAgentExecutor executor = new StreamingAgentExecutor(mock(ChatClient.class),
-					(c, rc) -> Flux.just(""));
+			StreamingAgentExecutor executor = new StreamingAgentExecutor(rc -> Flux.just(""));
 			assertThatThrownBy(() -> executor.cancel(ctx, queue)).isInstanceOf(TaskNotCancelableError.class);
 		}
 		finally {
@@ -168,8 +159,7 @@ class StreamingAgentExecutorTest {
 		EventQueue queue = eventQueue("t1", new ArrayList<>());
 		try {
 			RequestContext ctx = new RequestContext(null, "t1", "c1", task, null, this.callContext);
-			StreamingAgentExecutor executor = new StreamingAgentExecutor(mock(ChatClient.class),
-					(c, rc) -> Flux.just(""));
+			StreamingAgentExecutor executor = new StreamingAgentExecutor(rc -> Flux.just(""));
 			assertThatThrownBy(() -> executor.cancel(ctx, queue)).isInstanceOf(TaskNotCancelableError.class);
 		}
 		finally {
@@ -184,8 +174,7 @@ class StreamingAgentExecutorTest {
 		EventQueue queue = eventQueue("t1", events);
 		try {
 			RequestContext ctx = new RequestContext(null, "t1", "c1", task, null, this.callContext);
-			StreamingAgentExecutor executor = new StreamingAgentExecutor(mock(ChatClient.class),
-					(c, rc) -> Flux.just(""));
+			StreamingAgentExecutor executor = new StreamingAgentExecutor(rc -> Flux.just(""));
 			executor.cancel(ctx, queue);
 		}
 		finally {

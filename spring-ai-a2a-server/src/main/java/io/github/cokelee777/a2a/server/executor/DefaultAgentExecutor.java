@@ -10,7 +10,6 @@ import io.a2a.spec.TaskNotCancelableError;
 import io.a2a.spec.TaskState;
 import io.a2a.spec.TextPart;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.ai.chat.client.ChatClient;
 
 import java.util.List;
 import java.util.Objects;
@@ -29,18 +28,15 @@ import java.util.Objects;
  *
  * <p>
  * Implementations only need to provide a {@link ChatClientExecutorHandler} that takes a
- * simple String and returns a String response. All A2A protocol complexity and task
- * management is handled by this base class.
+ * {@link RequestContext} and returns a String response. All A2A protocol complexity and
+ * task management is handled by this class.
  */
 @Slf4j
 public class DefaultAgentExecutor implements AgentExecutor {
 
-	private final ChatClient chatClient;
-
 	private final ChatClientExecutorHandler chatClientExecutorHandler;
 
-	public DefaultAgentExecutor(ChatClient chatClient, ChatClientExecutorHandler chatClientExecutorHandler) {
-		this.chatClient = chatClient;
+	public DefaultAgentExecutor(ChatClientExecutorHandler chatClientExecutorHandler) {
 		this.chatClientExecutorHandler = chatClientExecutorHandler;
 	}
 
@@ -54,8 +50,7 @@ public class DefaultAgentExecutor implements AgentExecutor {
 			}
 			updater.startWork();
 
-			// Call user's method with clean string parameter
-			String response = this.chatClientExecutorHandler.execute(this.chatClient, context);
+			String response = this.chatClientExecutorHandler.execute(context);
 
 			response = Objects.requireNonNullElse(response, "");
 
