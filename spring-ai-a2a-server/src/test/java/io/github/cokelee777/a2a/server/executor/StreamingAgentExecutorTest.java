@@ -14,6 +14,7 @@ import io.a2a.spec.TextPart;
 import io.github.cokelee777.a2a.server.support.A2AServerTestFixtures;
 import org.junit.jupiter.api.Test;
 import org.springframework.ai.chat.client.ChatClient;
+import reactor.core.Exceptions;
 import reactor.core.publisher.Flux;
 
 import java.util.ArrayList;
@@ -48,7 +49,10 @@ class StreamingAgentExecutorTest {
 		}
 
 		assertThat(statusStates(events)).containsExactly(TaskState.SUBMITTED, TaskState.WORKING, TaskState.COMPLETED);
-		assertThat(artifactTexts(events)).containsExactly("hello world");
+		assertThat(artifactTexts(events)).containsExactly("hello", " world");
+		assertThat(String.join("", artifactTexts(events))).isEqualTo("hello world");
+		assertThat(artifactAppendFlags(events)).containsExactly(false, true);
+		assertThat(artifactLastChunkFlags(events)).containsExactly(false, true);
 		assertThat(lastStatusFinal(events)).isTrue();
 	}
 
@@ -85,6 +89,25 @@ class StreamingAgentExecutorTest {
 		}
 
 		assertThat(artifactTexts(events)).containsExactly("");
+		assertThat(statusStates(events)).containsExactly(TaskState.SUBMITTED, TaskState.WORKING, TaskState.COMPLETED);
+		assertThat(lastStatusFinal(events)).isTrue();
+	}
+
+	@Test
+	void execute_reactorCancelError_returnsWithoutJsonRpcError() {
+		List<Event> events = new ArrayList<>();
+		EventQueue queue = eventQueue("task-1", events);
+		try {
+			RequestContext ctx = new RequestContext(null, "task-1", "ctx-1", null, null, this.callContext);
+			StreamingAgentExecutor executor = new StreamingAgentExecutor(mock(ChatClient.class),
+					(c, rc) -> Flux.error(Exceptions.failWithCancel()));
+			executor.execute(ctx, queue);
+		}
+		finally {
+			queue.close();
+		}
+
+		assertThat(statusStates(events)).contains(TaskState.WORKING).doesNotContain(TaskState.COMPLETED);
 	}
 
 	@Test
@@ -99,6 +122,40 @@ class StreamingAgentExecutorTest {
 				assertThat(e.getCode()).isEqualTo(-32603);
 				assertThat(e.getMessage()).contains("stream error");
 			});
+		}
+		finally {
+			queue.close();
+		}
+	}
+
+	@Test
+	void execute_singleChunk_emitsAppendFalseAndLastChunkTrue() {
+		List<Event> events = new ArrayList<>();
+		EventQueue queue = eventQueue("task-1", events);
+		try {
+			RequestContext ctx = new RequestContext(null, "task-1", "ctx-1", null, null, this.callContext);
+			StreamingAgentExecutor executor = new StreamingAgentExecutor(mock(ChatClient.class),
+					(c, rc) -> Flux.just("only"));
+			executor.execute(ctx, queue);
+		}
+		finally {
+			queue.close();
+		}
+
+		assertThat(artifactTexts(events)).containsExactly("only");
+		assertThat(artifactAppendFlags(events)).containsExactly(false);
+		assertThat(artifactLastChunkFlags(events)).containsExactly(true);
+	}
+
+	@Test
+	void cancel_whenCanceled_throwsTaskNotCancelableError() {
+		var task = A2AServerTestFixtures.taskInState("t1", "c1", TaskState.CANCELED);
+		EventQueue queue = eventQueue("t1", new ArrayList<>());
+		try {
+			RequestContext ctx = new RequestContext(null, "t1", "c1", task, null, this.callContext);
+			StreamingAgentExecutor executor = new StreamingAgentExecutor(mock(ChatClient.class),
+					(c, rc) -> Flux.just(""));
+			assertThatThrownBy(() -> executor.cancel(ctx, queue)).isInstanceOf(TaskNotCancelableError.class);
 		}
 		finally {
 			queue.close();
@@ -164,6 +221,20 @@ class StreamingAgentExecutorTest {
 				.map(p -> ((TextPart) p).getText())
 				.toList())
 			.flatMap(List::stream)
+			.toList();
+	}
+
+	private static List<Boolean> artifactAppendFlags(List<Event> events) {
+		return events.stream()
+			.filter(TaskArtifactUpdateEvent.class::isInstance)
+			.map(e -> Boolean.TRUE.equals(((TaskArtifactUpdateEvent) e).isAppend()))
+			.toList();
+	}
+
+	private static List<Boolean> artifactLastChunkFlags(List<Event> events) {
+		return events.stream()
+			.filter(TaskArtifactUpdateEvent.class::isInstance)
+			.map(e -> Boolean.TRUE.equals(((TaskArtifactUpdateEvent) e).isLastChunk()))
 			.toList();
 	}
 

@@ -8,15 +8,17 @@ A2A 서버 인프라, 에이전트 공통 유틸리티, 대화 메모리 등을 
 
 ### spring-ai-a2a-server
 
-A2A 프로토콜 서버 구현체입니다. Spring MVC 컨트롤러와 `DefaultAgentExecutor`를 제공합니다.
+A2A 프로토콜 서버 구현체입니다. Spring MVC 컨트롤러와 `AgentExecutor` 구현체를 제공합니다.
 
 | 컴포넌트 | 설명 |
 |---------|------|
 | `AgentCardController` | `GET /.well-known/agent-card.json` — AgentCard 제공 |
-| `MessageController` | A2A JSON-RPC 메시지 엔드포인트 |
+| `MessageController` | A2A JSON-RPC 메시지 엔드포인트 (동기 JSON / `Accept: text/event-stream` 시 SSE) |
 | `TaskController` | A2A Task API 엔드포인트 |
-| `DefaultAgentExecutor` | Task 생명주기 관리, `ChatClientExecutorHandler`에 실행 위임 |
+| `DefaultAgentExecutor` | Task 생명주기 관리, `ChatClientExecutorHandler`에 **동기** 실행 위임 (`String` 응답) |
+| `StreamingAgentExecutor` | 동일 생명주기 + `StreamingChatClientExecutorHandler`의 **`Flux<String>`** 청크를 `TaskUpdater`로 **append 스트리밍** artifact |
 | `ChatClientExecutorHandler` | 에이전트 로직을 정의하는 함수형 인터페이스 (`RequestContext → String`) |
+| `StreamingChatClientExecutorHandler` | `RequestContext` 기준 `ChatClient` **스트림**을 `Flux<String>`으로 반환 |
 
 ### spring-ai-a2a-agent-common
 
@@ -24,7 +26,7 @@ A2A 클라이언트 측 공유 유틸리티입니다.
 
 | 컴포넌트 | 설명 |
 |---------|------|
-| `A2ATransport` | 다운스트림 에이전트에 메시지를 전송하고 `TaskEvent` 응답을 동기 블로킹으로 수신 |
+| `A2ATransport` | `send`: 비스트리밍 호출 후 **`TaskEvent`** 기반으로 결과 문자열 수집(추가 타임아웃 없음). `sendStream`: SSE **`TaskUpdateEvent`** 를 누적하며 최대 **60초** 대기 |
 | `LazyAgentCard` | AgentCard를 lazy 로딩·캐싱. `get()`은 null이면 재시도, `peek()`은 캐시만 반환 |
 | `TextExtractor` | `Task` / `Message`에서 텍스트를 추출하는 유틸리티 |
 
