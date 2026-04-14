@@ -17,8 +17,8 @@ spring:
           bedrock:
             agent-core:
               memory:
-                memory-id: ${BEDROCK_MEMORY_ID:BEDROCK_MEMORY_ID_PLACE_HOLDER}
-                actor-id: ${BEDROCK_ACTOR_ID:BEDROCK_ACTOR_ID_PLACE_HOLDER}
+                memory-id: ${BEDROCK_MEMORY_ID:}
+                actor-id: ${BEDROCK_ACTOR_ID:spring-ai}
     a2a:
       remote:
         agents:

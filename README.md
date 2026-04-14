@@ -34,9 +34,9 @@ A2A 클라이언트 측 공유 유틸리티입니다.
 
 | 모듈 | 활성화 조건 | 설명 |
 |------|-----------|------|
-| `spring-ai-a2a-autoconfigure-agent-common` | 항상 활성화 | `GET /ping` 헬스체크 엔드포인트 등록 |
-| `spring-ai-a2a-autoconfigure-server` | `ChatClient` 클래스가 클래스패스에 존재 | A2A 서버 인프라 자동 구성 (Virtual thread Executor, TaskStore, RequestHandler 등) |
-| `spring-ai-a2a-autoconfigure-model-chat-memory-repository-bedrock-agent-core` | `memory-id` 프로퍼티 설정 시 | `BedrockChatMemoryRepository` 등록. 미설정 시 Spring AI `InMemoryChatMemoryRepository` 폴백 |
+| `spring-ai-a2a-autoconfigure-agent-common` | 모듈이 클래스패스에 있을 때 | `spring.ai.a2a.remote.*` 바인딩(`RemoteAgentProperties`), `RemoteAgentCardRegistry` 빈 등록 (`GET /ping`은 샘플 애플리케이션의 `PingController`에서 제공) |
+| `spring-ai-a2a-autoconfigure-server` | `ChatClient`가 클래스패스에 있고 `spring.ai.a2a.server.enabled=true`(기본값) | A2A 서버 인프라 자동 구성 (Virtual thread Executor, TaskStore, RequestHandler 등) |
+| `spring-ai-a2a-autoconfigure-model-chat-memory-repository-bedrock-agent-core` | 구현체·AgentCore 클라이언트 클래스가 있고, `spring.ai.chat.memory.repository.bedrock.agent-core.memory.memory-id`가 설정되며 AWS 자격 증명 빈이 있을 때 | `BedrockAgentCoreChatMemoryRepository` 등록. 조건 미충족 시 Spring AI `InMemoryChatMemoryRepository` 폴백 |
 
 ### Starter 모듈 (`spring-ai-a2a-starters/`)
 
@@ -58,8 +58,8 @@ A2A 클라이언트 측 공유 유틸리티입니다.
 
 | 컴포넌트 | 설명 |
 |---------|------|
-| `BedrockChatMemoryRepository` | `ChatMemoryRepository` 구현체. `conversationId = "actorId:sessionId"` 복합키 사용 |
-| `AgentCoreEventToMessageConverter` | AgentCore Event → Spring AI `Message` 변환 |
+| `BedrockAgentCoreChatMemoryRepository` | `ChatMemoryRepository` 및 `AdvancedBedrockAgentCoreChatMemoryRepository` 구현. Spring AI `conversationId`는 Bedrock AgentCore `sessionId`에 매핑되고, `actorId`는 설정 또는 오버로드로 전달 |
+| `BedrockAgentCoreChatMemoryConfig` | `BedrockAgentCoreClient`, Memory Store `memoryId`, `actorId` 구성 |
 
 ```yaml
 spring:
@@ -69,8 +69,9 @@ spring:
         repository:
           bedrock:
             agent-core:
-              memory-id: ${BEDROCK_MEMORY_ID:}  # 미설정 시 InMemory 폴백
-              max-turns: 10
+              memory:
+                memory-id: ${BEDROCK_MEMORY_ID:}   # 비어 있으면 InMemory 폴백
+                actor-id: ${BEDROCK_ACTOR_ID:spring-ai}
 ```
 
 ---
@@ -124,7 +125,9 @@ Agent       Agent     Agent
 | `ORDER_AGENT_URL` | — | 주문 에이전트 URL |
 | `DELIVERY_AGENT_URL` | — | 배송 에이전트 URL |
 | `PAYMENT_AGENT_URL` | — | 결제 에이전트 URL |
-| `BEDROCK_MEMORY_ID` | — | Bedrock AgentCore Memory 리소스 ID (미설정 시 InMemory 폴백) |
+| `BEDROCK_MEMORY_ID` | — | Bedrock AgentCore Memory Store ID (`spring.ai.chat.memory.repository.bedrock.agent-core.memory.memory-id`; 미설정·플레이스홀더면 InMemory 폴백) |
+| `BEDROCK_ACTOR_ID` | (설정 기본값 `spring-ai`) | AgentCore Memory에서 사용하는 액터 ID (`memory.actor-id`) |
+| `BEDROCK_MAX_TOKENS` | `8096` | Bedrock Converse `max-tokens` |
 
 A2A 서버 blocking 타임아웃은 각 에이전트의 `application.yml`에서 오버라이드할 수 있습니다.
 

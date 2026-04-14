@@ -41,25 +41,25 @@ spring-ai-a2a/
 │   └── executor/ChatClientExecutorHandler   # 에이전트 로직 위임 함수형 인터페이스 (동기 String)
 ├── auto-configurations/agent/common/
 │   └── spring-ai-a2a-autoconfigure-agent-common/   # 에이전트 공통 자동 구성
-│       ├── AgentCommonAutoConfiguration     # PingController, RemoteAgentProperties, RemoteAgentCardRegistry
-│       ├── RemoteAgentProperties              # @ConfigurationProperties(prefix=spring.ai.a2a.remote)
+│       ├── AgentCommonAutoConfiguration     # RemoteAgentProperties, RemoteAgentCardRegistry (`GET /ping`은 샘플의 PingController)
+│       ├── RemoteAgentProperties              # @ConfigurationProperties(prefix=spring.ai.a2a.remote) — `agents` 맵
 │       └── RemoteAgentCardRegistry            # LazyAgentCard 레지스트리
 ├── auto-configurations/server/
 │   └── spring-ai-a2a-autoconfigure-server/          # A2A 서버 인프라 자동 구성
-│       ├── A2AServerAutoConfiguration       # ChatClient 클래스가 클래스패스에 있을 때 활성화
+│       ├── A2AServerAutoConfiguration       # ChatClient 클래스패스 + spring.ai.a2a.server.enabled(기본 true)일 때 활성화
 │       │   ├── a2aTaskExecutor              # Virtual thread 기반 Executor (에이전트 비동기 실행)
 │       │   ├── DefaultValuesConfigProvider  # A2A SDK 기본값 (a2a.blocking.* 등)
 │       │   └── SpringA2AConfigProvider      # Environment + 기본값 폴백 (커스텀 시 INFO 로그)
 │       └── A2AServerProperties              # @ConfigurationProperties(prefix=spring.ai.a2a.server)
 ├── auto-configurations/models/chat/memory/repository/
 │   └── spring-ai-a2a-autoconfigure-model-chat-memory-repository-bedrock-agent-core/
-│       ├── BedrockChatMemoryAutoConfiguration   # @AutoConfiguration(before=ChatMemoryAutoConfiguration)
-│       └── BedrockChatMemoryRepositoryProperties  # @ConfigurationProperties(prefix=spring.ai.chat.memory.repository.bedrock.agent-core)
+│       ├── BedrockAgentCoreChatMemoryRepositoryAutoConfiguration  # @AutoConfiguration(before=ChatMemoryAutoConfiguration)
+│       └── BedrockAgentCoreChatMemoryRepositoryProperties        # @ConfigurationProperties(prefix=spring.ai.chat.memory.repository.bedrock.agent-core.memory)
 ├── memory/repository/
 │   └── spring-ai-a2a-model-chat-memory-repository-bedrock-agent-core/
-│       ├── BedrockChatMemoryRepository      # ChatMemoryRepository 구현체 (append, conversationId="actorId:sessionId")
-│       ├── AgentCoreEventToMessageConverter # AgentCore Event → Spring AI Message 변환
-│       └── BedrockChatMemoryRepositoryConfig  # memoryId, maxTurns 설정 빈
+│       ├── BedrockAgentCoreChatMemoryRepository      # ChatMemoryRepository + AdvancedBedrockAgentCoreChatMemoryRepository (sessionId=conversationId, actorId 구성값/오버로드)
+│       ├── AdvancedBedrockAgentCoreChatMemoryRepository  # actorId·conversationId 오버로드 API
+│       └── BedrockAgentCoreChatMemoryConfig          # BedrockAgentCoreClient, memoryId, actorId
 ├── spring-ai-a2a-starters/                  # 의존성 묶음용 starter (java-library, api 전이)
 │   ├── spring-ai-a2a-starter-agent-common/       # agent-common + autoconfigure-agent-common
 │   ├── spring-ai-a2a-starter-server/             # server + autoconfigure-server
@@ -68,8 +68,8 @@ spring-ai-a2a/
 │   ├── host-agent/   (port: 8080)           # AgentCore Runtime 진입점 · 오케스트레이터 (starter-agent-common + starter-model-chat-memory-repository-bedrock-agent-core)
 │   │   ├── invocation/                      # POST /invocations, 오케스트레이션
 │   │   │   ├── InvocationController         # REST 엔드포인트
-│   │   │   ├── InvocationConfiguration      # orchestrator ChatClient @Bean (defaultTools + advisors)
-│   │   │   ├── DefaultInvocationService     # ChatMemoryRepository, actorId:sessionId 복합키
+│   │   │   ├── InvocationConfiguration      # blocking/streaming ChatClient @Bean (`RemoteAgentTools`는 여기서 defaultTools로 등록하지 않음)
+│   │   │   ├── DefaultInvocationService     # 매 요청 `RemoteAgentTools` 생성·`ChatClient.prompt().tools(...)`, 메모리는 conversationId 및(지원 시) actorId 스코프
 │   │   │   └── InvocationRequest/Response, InvocationService
 │   │   ├── remote/                          # 다운스트림 A2A 연동
 │   │   │   ├── RemoteAgentTools             # @Tool delegateToRemoteAgent / delegateToRemoteAgentsParallel, RemoteAgentCardRegistry 주입
@@ -131,12 +131,12 @@ spring-ai-a2a/
 - 패키지: `io.github.cokelee777.agent.host.remote`.
 - `@Tool` 메서드 `delegateToRemoteAgent(RemoteAgentDelegationRequest)` 로 단일 다운스트림 호출, 병렬 배치는 `delegateToRemoteAgentsParallel(List<RemoteAgentDelegationRequest>)`.
 - 각 파라미터에 `@ToolParam(description = "...")` 을 달아 LLM이 올바른 값을 추론하도록 돕는다.
-- `RemoteAgentCardRegistry`를 주입받는다. `delegateToRemoteAgent` / `delegateToRemoteAgentsParallel`은 `findCardByAgentName`으로 카드를 해소하고 `A2ATransport`로 전송한다. 알 수 없는 이름일 때는 `peekCachedAgentCards()` 기반으로 영문 한 줄 에러를 반환한다.
+- `InvocationService` 구현체가 요청마다 `new RemoteAgentTools(registry[, emitter])`로 생성한다. `delegateToRemoteAgent` / `delegateToRemoteAgentsParallel`은 `findCardByAgentName`으로 카드를 해소하고 `A2ATransport`로 전송한다. 알 수 없는 이름일 때는 `peekCachedAgentCards()` 기반으로 영문 한 줄 에러를 반환한다.
 
 ### Invocation 경로 (`host-agent` → `invocation`)
 
 - `InvocationController` — AgentCore Runtime → `POST /invocations`.
-- `InvocationConfiguration` — orchestrator용 `ChatClient` 빈 (`RemoteAgentTools`를 defaultTools로 등록, `SimpleLoggerAdvisor` 등).
+- `InvocationConfiguration` — blocking/streaming `ChatClient` 빈(`SimpleLoggerAdvisor` 등). `RemoteAgentTools`는 `DefaultInvocationService`가 호출마다 `.tools(...)`로 연결한다.
 - `DefaultInvocationService` — 시스템 프롬프트를 **매 요청마다** `RemoteAgentCardRegistry#getAgentDescriptions()`로 동적 생성한다.
   빈 초기화 시 고정(static)하면 시작 후 lazy 로드된 에이전트가 프롬프트에 반영되지 않는다.
 
@@ -161,26 +161,27 @@ spring-ai-a2a/
 - `auto-configurations/server/spring-ai-a2a-autoconfigure-server/src/main/resources/application.yml`에 기본값이 있으며, 각 에이전트 모듈의 `application.yml`에서 재정의하면 **오버라이드**된다 (Spring Boot: 메인 앱 설정이 라이브러리보다 우선).
 - 커스텀 값을 쓰면 `SpringA2AConfigProvider`에서 INFO 로그로 `Using custom A2A config: key=value` 또는 `Using custom A2A optional config: key=value` 출력.
 
-### BedrockChatMemoryRepositoryProperties (autoconfigure 모듈)
+### BedrockAgentCoreChatMemoryRepositoryProperties (autoconfigure 모듈)
 
-- prefix: `spring.ai.chat.memory.repository.bedrock.agent-core`. 환경변수 `BEDROCK_MEMORY_ID` 등으로 오버라이드.
-- `memoryId` — `@Nullable`. `memory-id` 미설정 시 autoconfigure 전체가 비활성화되어 Spring AI의 `InMemoryChatMemoryRepository`가 폴백으로 등록된다.
-- `maxTurns` — `@Min(1)`, 기본 10. `listEvents`에서 `maxResults = maxTurns * 2`로 사용.
+- prefix: `spring.ai.chat.memory.repository.bedrock.agent-core.memory` (`memory-id`, `actor-id`).
+- `memoryId` — `@Nullable`. 비어 있으면 `BedrockAgentCoreChatMemoryRepositoryAutoConfiguration`이 비활성화되고 Spring AI `InMemoryChatMemoryRepository`가 폴백된다.
+- `actorId` — 기본값 `BedrockAgentCoreChatMemoryConfig.DEFAULT_ACTOR_ID`(`spring-ai`). 환경변수 `BEDROCK_MEMORY_ID`, `BEDROCK_ACTOR_ID` 등으로 오버라이드 가능.
 
-### BedrockChatMemoryAutoConfiguration
+### BedrockAgentCoreChatMemoryRepositoryAutoConfiguration
 
-- `@AutoConfiguration(before = ChatMemoryAutoConfiguration.class)` — Spring AI InMemory 폴백보다 먼저 등록된다.
-- `@ConditionalOnClass(BedrockChatMemoryRepository.class)` — 클래스패스에 구현체 모듈이 있을 때만 활성화.
-- `@ConditionalOnProperty(prefix=CONFIG_PREFIX, name="memory-id")` — `memory-id` 미설정 시 비활성화 → InMemory 폴백.
-- `bedrockAgentCoreClient` 빈에 `@ConditionalOnMissingBean` 적용 → 테스트에서 mock 주입 가능.
+- `@AutoConfiguration(before = ChatMemoryAutoConfiguration.class)` — InMemory 자동구성보다 먼저 등록.
+- `@ConditionalOnClass(BedrockAgentCoreChatMemoryRepository.class, BedrockAgentCoreClient.class)`.
+- `@ConditionalOnProperty(prefix = ...memory, name = "memory-id")` — 유효한 `memory-id`가 있을 때만 활성화.
+- `@ConditionalOnBean({ AwsCredentialsProvider.class, AwsRegionProvider.class })` — `BedrockAwsConnectionConfiguration`(`spring.ai.bedrock.aws.*`)과 함께 AWS 연결 필요.
+- `@ConditionalOnMissingBean(ChatMemoryRepository.class)` 로 기본 `BedrockAgentCoreChatMemoryRepository` 등록(테스트에서 타입으로 대체 가능).
 
-### BedrockChatMemoryRepository (impl 모듈)
+### BedrockAgentCoreChatMemoryRepository (impl 모듈)
 
-- `ChatMemoryRepository` 구현체. `conversationId = "actorId:sessionId"` 복합키 파싱.
-- `findByConversationId` — `listEvents(maxResults = maxTurns * 2)` → `AgentCoreEventToMessageConverter` 변환, 오름차순 정렬.
-- `saveAll` — `createEvent` 호출 (append-only, `JdbcChatMemoryRepository`와 동일한 semantics). `DefaultInvocationService`는 새 2개 메시지만 전달.
-- `deleteByConversationId` — `UnsupportedOperationException` (삭제 API 미지원).
-- `findConversationIds` — `UnsupportedOperationException` (목록 API 미지원).
+- `ChatMemoryRepository` 및 `AdvancedBedrockAgentCoreChatMemoryRepository` 구현. Bedrock AgentCore Memory의 `sessionId`에 Spring AI `conversationId`를 매핑하고, `actorId`는 설정값 또는 오버로드 인자로 전달한다.
+- `findByConversationId` — `listEvents` 페이지네이터로 이벤트를 읽어 `toMessage()`로 변환, 타임스탬프 오름차순.
+- `saveAll` — 해당 세션의 기존 이벤트를 `deleteEvent`로 제거한 뒤, 전달된 메시지마다 `createEvent`로 재기록한다. `DefaultInvocationService`는 호출 후 전체 대화(이력 + 신규 user/assistant)를 넘긴다.
+- `deleteByConversationId` — 이벤트별 `deleteEvent`로 구현.
+- `findConversationIds` — `listSessions` 기반으로 구현.
 
 ### MCP 서버 (`*McpConfiguration`)
 
@@ -196,7 +197,7 @@ spring-ai-a2a/
 ### auto-configure 활성화 조건
 
 - `A2AServerAutoConfiguration` — `@ConditionalOnClass(ChatClient.class)` + `@ConditionalOnProperty(spring.ai.a2a.server.enabled, matchIfMissing=true)`. A2A 서버 인프라(컨트롤러, Executor, TaskStore 등) 자동 구성.
-- `AgentCommonAutoConfiguration` — 조건 없이 항상 활성화. `PingController` (`GET /ping`), `@EnableConfigurationProperties(RemoteAgentProperties)` (`spring.ai.a2a.remote.*`), `RemoteAgentCardRegistry` 빈 등록.
+- `AgentCommonAutoConfiguration` — 모듈이 클래스패스에 있으면 등록. `@EnableConfigurationProperties(RemoteAgentProperties)`(`spring.ai.a2a.remote.*`), `RemoteAgentCardRegistry` 빈. `GET /ping`은 샘플 앱 `PingController`가 담당한다.
 
 ## Docker 빌드
 
