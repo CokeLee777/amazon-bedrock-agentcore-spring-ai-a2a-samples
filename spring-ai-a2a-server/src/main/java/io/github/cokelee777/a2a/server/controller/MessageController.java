@@ -4,6 +4,7 @@ import io.a2a.server.ServerCallContext;
 import io.a2a.server.auth.UnauthenticatedUser;
 import io.a2a.server.requesthandlers.RequestHandler;
 import io.a2a.spec.EventKind;
+import io.a2a.spec.InternalError;
 import io.a2a.spec.JSONRPCError;
 import io.a2a.spec.MessageSendParams;
 import io.a2a.spec.SendMessageRequest;
@@ -57,8 +58,7 @@ public class MessageController {
 		}
 		catch (Exception e) {
 			log.error("Unexpected error processing message - id: {}", request.getId(), e);
-			return new SendMessageResponse(request.getId(),
-					new JSONRPCError(-32603, "Internal error: " + e.getMessage(), null));
+			return new SendMessageResponse(request.getId(), new InternalError("Internal error: " + e.getMessage()));
 		}
 	}
 

@@ -1,8 +1,8 @@
 package io.github.cokelee777.a2a.server.controller;
 
 import io.a2a.server.requesthandlers.RequestHandler;
-import io.a2a.spec.JSONRPCError;
 import io.a2a.spec.MessageSendParams;
+import io.a2a.spec.TaskNotFoundError;
 import io.a2a.spec.StreamingEventKind;
 import io.a2a.spec.Task;
 import io.a2a.spec.TaskState;
@@ -72,7 +72,7 @@ class MessageControllerTest {
 	@Test
 	void sendMessage_jsonRpcErrorFromHandler_returnedAsJsonRpcErrorResponse() throws Exception {
 		when(this.requestHandler.onMessageSend(any(MessageSendParams.class), any()))
-			.thenThrow(new JSONRPCError(-32001, "upstream", null));
+			.thenThrow(new TaskNotFoundError(TaskNotFoundError.DEFAULT_CODE, "upstream", null));
 
 		String body = """
 				{

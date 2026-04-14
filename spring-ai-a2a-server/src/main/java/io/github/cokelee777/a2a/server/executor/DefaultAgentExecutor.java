@@ -4,6 +4,7 @@ import io.a2a.server.agentexecution.AgentExecutor;
 import io.a2a.server.agentexecution.RequestContext;
 import io.a2a.server.events.EventQueue;
 import io.a2a.server.tasks.TaskUpdater;
+import io.a2a.spec.InternalError;
 import io.a2a.spec.JSONRPCError;
 import io.a2a.spec.Task;
 import io.a2a.spec.TaskNotCancelableError;
@@ -59,7 +60,7 @@ public class DefaultAgentExecutor implements AgentExecutor {
 		}
 		catch (Exception e) {
 			log.error("Error executing agent task", e);
-			throw new JSONRPCError(-32603, "Agent execution failed: " + e.getMessage(), null);
+			throw new InternalError("Agent execution failed: " + e.getMessage());
 		}
 	}
 

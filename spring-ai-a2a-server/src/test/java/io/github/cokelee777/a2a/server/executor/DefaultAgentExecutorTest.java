@@ -5,8 +5,9 @@ import io.a2a.server.agentexecution.RequestContext;
 import io.a2a.server.events.EventQueue;
 import io.a2a.server.tasks.InMemoryTaskStore;
 import io.a2a.spec.Event;
-import io.a2a.spec.JSONRPCError;
+import io.a2a.spec.InternalError;
 import io.a2a.spec.Task;
+import io.a2a.spec.TaskNotFoundError;
 import io.a2a.spec.TaskArtifactUpdateEvent;
 import io.a2a.spec.TaskNotCancelableError;
 import io.a2a.spec.TaskState;
@@ -127,7 +128,8 @@ class DefaultAgentExecutorTest {
 		EventQueue queue = eventQueue("task-1", new ArrayList<>());
 		try {
 			RequestContext ctx = new RequestContext(null, "task-1", "ctx-1", null, null, this.callContext);
-			JSONRPCError original = new JSONRPCError(-32001, "application error", null);
+			TaskNotFoundError original = new TaskNotFoundError(TaskNotFoundError.DEFAULT_CODE, "application error",
+					null);
 			DefaultAgentExecutor executor = new DefaultAgentExecutor(rc -> {
 				throw original;
 			});
@@ -146,9 +148,9 @@ class DefaultAgentExecutorTest {
 			DefaultAgentExecutor executor = new DefaultAgentExecutor(rc -> {
 				throw new IllegalStateException("bad");
 			});
-			assertThatThrownBy(() -> executor.execute(ctx, queue)).isInstanceOf(JSONRPCError.class).satisfies(t -> {
-				JSONRPCError e = (JSONRPCError) t;
-				assertThat(e.getCode()).isEqualTo(-32603);
+			assertThatThrownBy(() -> executor.execute(ctx, queue)).isInstanceOf(InternalError.class).satisfies(t -> {
+				InternalError e = (InternalError) t;
+				assertThat(e.getCode()).isEqualTo(InternalError.DEFAULT_CODE);
 				assertThat(e.getMessage()).contains("Agent execution failed: bad");
 			});
 		}
@@ -165,9 +167,9 @@ class DefaultAgentExecutorTest {
 			DefaultAgentExecutor executor = new DefaultAgentExecutor(rc -> {
 				throw new UncheckedIOException("io failed", new IOException("root"));
 			});
-			assertThatThrownBy(() -> executor.execute(ctx, queue)).isInstanceOf(JSONRPCError.class).satisfies(t -> {
-				JSONRPCError e = (JSONRPCError) t;
-				assertThat(e.getCode()).isEqualTo(-32603);
+			assertThatThrownBy(() -> executor.execute(ctx, queue)).isInstanceOf(InternalError.class).satisfies(t -> {
+				InternalError e = (InternalError) t;
+				assertThat(e.getCode()).isEqualTo(InternalError.DEFAULT_CODE);
 				assertThat(e.getMessage()).contains("Agent execution failed: io failed");
 			});
 		}

@@ -7,6 +7,7 @@ import io.a2a.spec.CancelTaskRequest;
 import io.a2a.spec.CancelTaskResponse;
 import io.a2a.spec.GetTaskRequest;
 import io.a2a.spec.GetTaskResponse;
+import io.a2a.spec.InternalError;
 import io.a2a.spec.JSONRPCError;
 import io.a2a.spec.Task;
 import io.a2a.spec.TaskIdParams;
@@ -56,8 +57,7 @@ public class TaskController {
 		}
 		catch (Exception e) {
 			log.error("Unexpected error getting task - id: {}", request.getId(), e);
-			return new GetTaskResponse(request.getId(),
-					new JSONRPCError(-32603, "Internal error: " + e.getMessage(), null));
+			return new GetTaskResponse(request.getId(), new InternalError("Internal error: " + e.getMessage()));
 		}
 	}
 
@@ -84,8 +84,7 @@ public class TaskController {
 		}
 		catch (Exception e) {
 			log.error("Unexpected error cancelling task - id: {}", request.getId(), e);
-			return new CancelTaskResponse(request.getId(),
-					new JSONRPCError(-32603, "Internal error: " + e.getMessage(), null));
+			return new CancelTaskResponse(request.getId(), new InternalError("Internal error: " + e.getMessage()));
 		}
 	}
 

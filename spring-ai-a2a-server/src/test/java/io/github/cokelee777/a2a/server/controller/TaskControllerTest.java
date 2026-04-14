@@ -1,8 +1,8 @@
 package io.github.cokelee777.a2a.server.controller;
 
 import io.a2a.server.requesthandlers.RequestHandler;
-import io.a2a.spec.JSONRPCError;
 import io.a2a.spec.Task;
+import io.a2a.spec.TaskNotFoundError;
 import io.a2a.spec.TaskIdParams;
 import io.a2a.spec.TaskQueryParams;
 import io.a2a.spec.TaskState;
@@ -82,7 +82,7 @@ class TaskControllerTest {
 	@Test
 	void getTask_jsonRpcErrorFromHandler_returnedAsJsonRpcErrorResponse() throws Exception {
 		when(this.requestHandler.onGetTask(any(TaskQueryParams.class), any()))
-			.thenThrow(new JSONRPCError(-32001, "no task", null));
+			.thenThrow(new TaskNotFoundError(TaskNotFoundError.DEFAULT_CODE, "no task", null));
 
 		String body = """
 				{

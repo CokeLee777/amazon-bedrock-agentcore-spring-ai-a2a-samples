@@ -5,7 +5,7 @@ import io.a2a.server.agentexecution.RequestContext;
 import io.a2a.server.events.EventQueue;
 import io.a2a.server.tasks.InMemoryTaskStore;
 import io.a2a.spec.Event;
-import io.a2a.spec.JSONRPCError;
+import io.a2a.spec.InternalError;
 import io.a2a.spec.TaskArtifactUpdateEvent;
 import io.a2a.spec.TaskNotCancelableError;
 import io.a2a.spec.TaskState;
@@ -110,9 +110,9 @@ class StreamingAgentExecutorTest {
 			RequestContext ctx = new RequestContext(null, "task-1", "ctx-1", null, null, this.callContext);
 			StreamingAgentExecutor executor = new StreamingAgentExecutor(
 					rc -> Flux.error(new RuntimeException("stream error")));
-			assertThatThrownBy(() -> executor.execute(ctx, queue)).isInstanceOf(JSONRPCError.class).satisfies(t -> {
-				JSONRPCError e = (JSONRPCError) t;
-				assertThat(e.getCode()).isEqualTo(-32603);
+			assertThatThrownBy(() -> executor.execute(ctx, queue)).isInstanceOf(InternalError.class).satisfies(t -> {
+				InternalError e = (InternalError) t;
+				assertThat(e.getCode()).isEqualTo(InternalError.DEFAULT_CODE);
 				assertThat(e.getMessage()).contains("stream error");
 			});
 		}

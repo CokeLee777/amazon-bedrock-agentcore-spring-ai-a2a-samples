@@ -4,6 +4,7 @@ import io.a2a.server.agentexecution.AgentExecutor;
 import io.a2a.server.agentexecution.RequestContext;
 import io.a2a.server.events.EventQueue;
 import io.a2a.server.tasks.TaskUpdater;
+import io.a2a.spec.InternalError;
 import io.a2a.spec.JSONRPCError;
 import io.a2a.spec.Task;
 import io.a2a.spec.TaskNotCancelableError;
@@ -75,7 +76,7 @@ public class StreamingAgentExecutor implements AgentExecutor {
 				if (Exceptions.isCancel(e)) {
 					return;
 				}
-				throw new JSONRPCError(-32603, "Agent execution failed: " + e.getMessage(), null);
+				throw new InternalError("Agent execution failed: " + e.getMessage());
 			}
 
 			if (!artifactEmitter.hasEmittedArtifact()) {
@@ -91,11 +92,11 @@ public class StreamingAgentExecutor implements AgentExecutor {
 		}
 		catch (InterruptedException e) {
 			Thread.currentThread().interrupt();
-			throw new JSONRPCError(-32603, "Agent execution interrupted: " + e.getMessage(), null);
+			throw new InternalError("Agent execution interrupted: " + e.getMessage());
 		}
 		catch (Exception e) {
 			log.error("Error executing streaming agent task", e);
-			throw new JSONRPCError(-32603, "Agent execution failed: " + e.getMessage(), null);
+			throw new InternalError("Agent execution failed: " + e.getMessage());
 		}
 		finally {
 			if (subscription != null) {
